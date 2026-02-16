@@ -1,0 +1,20 @@
+import { z } from 'zod';
+
+export const createDistributionSchema = z.object({
+  cityId: z.string(),
+  area: z.string().min(1),
+  campaignId: z.string().optional(),
+  items: z.array(z.object({
+    itemId: z.string(),
+    quantity: z.number().min(1)
+  })).min(1),
+  requestId: z.string()
+});
+
+export const reportDamageSchema = z.object({
+  items: z.array(z.object({
+    itemId: z.string(),
+    quantity: z.number().min(1)
+  })).min(1),
+  requestId: z.string()
+});

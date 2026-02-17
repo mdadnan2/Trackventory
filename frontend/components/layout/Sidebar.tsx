@@ -24,8 +24,7 @@ interface SidebarProps {
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['ADMIN', 'VOLUNTEER'] },
   { href: '/dashboard/items', label: 'Items', icon: Package, roles: ['ADMIN'] },
-  { href: '/dashboard/inventory', label: 'Inventory', icon: PackageSearch, roles: ['ADMIN', 'VOLUNTEER'] },
-  { href: '/dashboard/stock', label: 'Stock', icon: Warehouse, roles: ['ADMIN'] },
+  { href: '/dashboard/stock', label: 'Stock', icon: Warehouse, roles: ['ADMIN', 'VOLUNTEER'] },
   { href: '/dashboard/users', label: 'Users', icon: Users, roles: ['ADMIN'] },
   { href: '/dashboard/cities', label: 'Cities', icon: MapPin, roles: ['ADMIN'] },
   { href: '/dashboard/campaigns', label: 'Campaigns', icon: Megaphone, roles: ['ADMIN'] },
@@ -44,10 +43,10 @@ export default function Sidebar({ user }: SidebarProps) {
     <aside className="fixed left-0 top-0 h-screen w-64 bg-white border-r border-slate-200 flex flex-col">
       <div className="p-6 border-b border-slate-200">
         <div className="flex items-center gap-3">
-          <PackageCheck className="text-blue-600" size={32} strokeWidth={2.5} />
+          <PackageCheck className="text-blue-600" size={46} strokeWidth={2.5} />
           <div>
             <h1 className="text-2xl font-bold text-slate-900">Trackventory</h1>
-            <p className="text-sm text-slate-500 mt-1">Distribution Manager</p>
+            <p className="text-xs text-slate-500 mt-0.5">Distribution Manager</p>
           </div>
         </div>
       </div>

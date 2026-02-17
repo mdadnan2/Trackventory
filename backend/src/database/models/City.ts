@@ -10,6 +10,4 @@ const citySchema = new Schema<ICity>({
   createdAt: { type: Date, default: Date.now }
 });
 
-citySchema.index({ name: 1 });
-
 export const City = mongoose.model<ICity>('City', citySchema);

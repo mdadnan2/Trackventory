@@ -28,7 +28,4 @@ const userSchema = new Schema<IUser>({
   createdAt: { type: Date, default: Date.now }
 });
 
-userSchema.index({ firebaseUid: 1 });
-userSchema.index({ email: 1 });
-
 export const User = mongoose.model<IUser>('User', userSchema);

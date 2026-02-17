@@ -124,6 +124,7 @@ export default function DistributionPage() {
   };
 
   const getAvailableStock = (itemId: string) => {
+    if (!itemId) return 0;
     const stock = myStock.find(s => s.itemId === itemId);
     return stock?.stock || 0;
   };
@@ -232,7 +233,9 @@ export default function DistributionPage() {
                   </FormSection>
 
                   <FormSection title="Items Distributed" description="What items are being distributed?">
-                    {formData.items.map((item, index) => (
+                    {formData.items.map((item, index) => {
+                      const availableStock = getAvailableStock(item.itemId);
+                      return (
                       <div key={index} className="md:col-span-2 flex gap-4">
                         <FormField label="Item" required fullWidth>
                           <select
@@ -255,8 +258,8 @@ export default function DistributionPage() {
                             className="input"
                             value={item.quantity}
                             onChange={(e) => updateItem(index, 'quantity', parseInt(e.target.value))}
-                            min="1"
-                            max={getAvailableStock(item.itemId)}
+                            min="0"
+                            max={availableStock > 0 ? availableStock : undefined}
                             required
                           />
                         </FormField>
@@ -271,7 +274,7 @@ export default function DistributionPage() {
                           </div>
                         )}
                       </div>
-                    ))}
+                    )})}
                   </FormSection>
 
                   <div className="flex justify-between pt-4">
@@ -306,7 +309,9 @@ export default function DistributionPage() {
                   )}
 
                   <FormSection title="Damaged Items" description="Report items that are damaged or unusable">
-                    {formData.items.map((item, index) => (
+                    {formData.items.map((item, index) => {
+                      const availableStock = getAvailableStock(item.itemId);
+                      return (
                       <div key={index} className="md:col-span-2 flex gap-4">
                         <FormField label="Item" required fullWidth>
                           <select
@@ -329,8 +334,8 @@ export default function DistributionPage() {
                             className="input"
                             value={item.quantity}
                             onChange={(e) => updateItem(index, 'quantity', parseInt(e.target.value))}
-                            min="1"
-                            max={getAvailableStock(item.itemId)}
+                            min="0"
+                            max={availableStock > 0 ? availableStock : undefined}
                             required
                           />
                         </FormField>
@@ -345,7 +350,7 @@ export default function DistributionPage() {
                           </div>
                         )}
                       </div>
-                    ))}
+                    )})}
                   </FormSection>
 
                   <div className="flex justify-between pt-4">

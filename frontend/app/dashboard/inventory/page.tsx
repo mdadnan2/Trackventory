@@ -2,12 +2,14 @@
 
 import { useEffect, useState } from 'react';
 import { stockAPI, usersAPI } from '@/services/api';
+import { useAuth } from '@/hooks/useAuth';
 import { StockItem, User } from '@/types';
 import { Package, Users, TrendingUp, AlertCircle } from 'lucide-react';
 import PageHeader from '@/components/ui/page-header';
 import ContentCard from '@/components/ui/content-card';
 
 export default function InventoryPage() {
+  const { user } = useAuth();
   const [centralStock, setCentralStock] = useState<StockItem[]>([]);
   const [volunteers, setVolunteers] = useState<User[]>([]);
   const [selectedVolunteer, setSelectedVolunteer] = useState<string>('');
@@ -17,7 +19,7 @@ export default function InventoryPage() {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     if (selectedVolunteer) {
@@ -28,12 +30,17 @@ export default function InventoryPage() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [stockRes, usersRes] = await Promise.all([
-        stockAPI.getCentralStock(),
-        usersAPI.getAll(1, 100)
-      ]);
-      setCentralStock(stockRes.data.data);
-      setVolunteers(usersRes.data.data.users.filter((u: User) => u.role === 'VOLUNTEER'));
+      if (user?.role === 'ADMIN') {
+        const [stockRes, usersRes] = await Promise.all([
+          stockAPI.getCentralStock(),
+          usersAPI.getAll(1, 100)
+        ]);
+        setCentralStock(stockRes.data.data);
+        setVolunteers(usersRes.data.data.users.filter((u: User) => u.role === 'VOLUNTEER'));
+      } else if (user?.role === 'VOLUNTEER') {
+        const stockRes = await stockAPI.getVolunteerStock(user._id);
+        setVolunteerStock(stockRes.data.data);
+      }
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -53,6 +60,84 @@ export default function InventoryPage() {
   const totalCentralStock = centralStock.reduce((sum, item) => sum + item.stock, 0);
   const totalVolunteerStock = volunteerStock.reduce((sum, item) => sum + item.stock, 0);
   const lowStockItems = centralStock.filter(item => item.stock < 10).length;
+
+  if (user?.role === 'VOLUNTEER') {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title="My Inventory"
+          description="View your assigned stock"
+          icon={Package}
+        />
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <ContentCard>
+            <div className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-slate-500">Total Items</p>
+                  <p className="text-3xl font-bold text-slate-900 mt-2">{volunteerStock.length}</p>
+                </div>
+                <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                  <Package className="text-blue-600" size={24} />
+                </div>
+              </div>
+            </div>
+          </ContentCard>
+
+          <ContentCard>
+            <div className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-slate-500">Total Quantity</p>
+                  <p className="text-3xl font-bold text-slate-900 mt-2">{totalVolunteerStock}</p>
+                </div>
+                <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                  <TrendingUp className="text-green-600" size={24} />
+                </div>
+              </div>
+            </div>
+          </ContentCard>
+        </div>
+
+        <ContentCard>
+          <div className="p-6">
+            {loading ? (
+              <div className="text-center py-12 text-slate-500">Loading...</div>
+            ) : volunteerStock.length === 0 ? (
+              <div className="text-center py-12 text-slate-500">
+                <Package className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                <p>No stock assigned yet</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-slate-200">
+                      <th className="text-left py-3 px-4 text-sm font-semibold text-slate-700">Item Name</th>
+                      <th className="text-left py-3 px-4 text-sm font-semibold text-slate-700">Category</th>
+                      <th className="text-left py-3 px-4 text-sm font-semibold text-slate-700">Unit</th>
+                      <th className="text-right py-3 px-4 text-sm font-semibold text-slate-700">Quantity</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {volunteerStock.map((stockItem) => (
+                      <tr key={stockItem.itemId} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                        <td className="py-4 px-4 font-medium text-slate-900">{stockItem.item.name}</td>
+                        <td className="py-4 px-4 text-slate-600">{stockItem.item.category}</td>
+                        <td className="py-4 px-4 text-slate-600">{stockItem.item.unit}</td>
+                        <td className="py-4 px-4 text-right font-semibold text-blue-600">{stockItem.stock}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </ContentCard>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

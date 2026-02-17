@@ -13,10 +13,13 @@ export class AuthService {
 
     return {
       user: {
+        _id: user._id,
         id: user._id,
+        firebaseUid: user.firebaseUid,
         name: user.name,
         email: user.email,
-        role: user.role
+        role: user.role,
+        status: user.status
       }
     };
   }

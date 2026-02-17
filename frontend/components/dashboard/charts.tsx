@@ -1,31 +1,35 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { PieChart, Pie, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, Legend } from 'recharts';
 
-const distributionData = [
-  { month: 'Jan', distributed: 1200 },
-  { month: 'Feb', distributed: 1900 },
-  { month: 'Mar', distributed: 1500 },
-  { month: 'Apr', distributed: 2200 },
-  { month: 'May', distributed: 2800 },
-  { month: 'Jun', distributed: 2400 },
-];
+const COLORS = ['#0A4D68', '#088395', '#7DD3FC', '#D1D5DB', '#FBBF24'];
 
 interface ChartsProps {
   itemData?: Array<{ name: string; distributed: number }>;
+  trendData?: Array<{ name: string; value: number }>;
 }
 
-export default function Charts({ itemData }: ChartsProps) {
+export default function Charts({ itemData, trendData }: ChartsProps) {
   const defaultItemData = [
-    { name: 'Rice', distributed: 3200 },
-    { name: 'Wheat', distributed: 2800 },
-    { name: 'Oil', distributed: 1500 },
-    { name: 'Sugar', distributed: 1200 },
-    { name: 'Lentils', distributed: 900 },
+    { name: 'A', distributed: 100 },
+    { name: 'B', distributed: 80 },
+    { name: 'C', distributed: 40 },
+    { name: 'D', distributed: 65 },
+    { name: 'E', distributed: 30 },
   ];
 
-  const barData = itemData || defaultItemData;
+  const defaultTrendData = [
+    { name: 'A', value: 100 },
+    { name: 'B', value: 80 },
+    { name: 'C', value: 65 },
+    { name: 'D', value: 40 },
+    { name: 'E', value: 30 },
+  ];
+
+  const barData = itemData && itemData.length > 0 ? itemData : defaultItemData;
+  const donutData = trendData && trendData.length > 0 ? trendData : defaultTrendData;
+  const BAR_COLORS = ['#0A4D68', '#088395', '#7DD3FC', '#D1D5DB', '#FBBF24'];
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -37,27 +41,22 @@ export default function Charts({ itemData }: ChartsProps) {
       >
         <h3 className="text-lg font-semibold text-slate-900 mb-4">Distribution Trend</h3>
         <ResponsiveContainer width="100%" height={300}>
-          <LineChart data={distributionData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-            <XAxis dataKey="month" stroke="#64748b" fontSize={12} />
-            <YAxis stroke="#64748b" fontSize={12} />
-            <Tooltip 
-              contentStyle={{ 
-                backgroundColor: 'white', 
-                border: '1px solid #e2e8f0', 
-                borderRadius: '12px',
-                boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
-              }} 
-            />
-            <Line 
-              type="monotone" 
-              dataKey="distributed" 
-              stroke="#3b82f6" 
-              strokeWidth={3}
-              dot={{ fill: '#3b82f6', r: 4 }}
-              activeDot={{ r: 6 }}
-            />
-          </LineChart>
+          <PieChart>
+            <Pie
+              data={donutData}
+              cx="50%"
+              cy="50%"
+              innerRadius={80}
+              outerRadius={120}
+              dataKey="value"
+              label={({ name }) => name}
+            >
+              {donutData.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+              ))}
+            </Pie>
+            <Tooltip />
+          </PieChart>
         </ResponsiveContainer>
       </motion.div>
 
@@ -70,9 +69,9 @@ export default function Charts({ itemData }: ChartsProps) {
         <h3 className="text-lg font-semibold text-slate-900 mb-4">Item Distribution</h3>
         <ResponsiveContainer width="100%" height={300}>
           <BarChart data={barData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-            <XAxis dataKey="name" stroke="#64748b" fontSize={12} />
-            <YAxis stroke="#64748b" fontSize={12} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+            <XAxis dataKey="name" stroke="#64748b" fontSize={12} axisLine={false} tickLine={false} />
+            <YAxis stroke="#64748b" fontSize={12} axisLine={false} tickLine={false} />
             <Tooltip 
               contentStyle={{ 
                 backgroundColor: 'white', 
@@ -81,7 +80,11 @@ export default function Charts({ itemData }: ChartsProps) {
                 boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
               }} 
             />
-            <Bar dataKey="distributed" fill="#8b5cf6" radius={[8, 8, 0, 0]} />
+            <Bar dataKey="distributed" radius={[8, 8, 0, 0]}>
+              {barData.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={BAR_COLORS[index % BAR_COLORS.length]} />
+              ))}
+            </Bar>
           </BarChart>
         </ResponsiveContainer>
       </motion.div>

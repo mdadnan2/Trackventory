@@ -159,15 +159,31 @@ export class StockService {
         ? await VolunteerStockAssignment.create(assignmentData, { session })
         : await VolunteerStockAssignment.create(assignmentData);
 
-      const transactions = items.map(item => ({
-        itemId: new mongoose.Types.ObjectId(item.itemId),
-        type: TransactionType.ISSUE_TO_VOLUNTEER,
-        direction: TransactionDirection.OUT,
-        quantity: item.quantity,
-        referenceType: 'VolunteerStockAssignment',
-        referenceId: assignment[0]._id,
-        performedBy: new mongoose.Types.ObjectId(volunteerId)
-      }));
+      const transactions = [];
+      
+      for (const item of items) {
+        // OUT from central warehouse
+        transactions.push({
+          itemId: new mongoose.Types.ObjectId(item.itemId),
+          type: TransactionType.ISSUE_TO_VOLUNTEER,
+          direction: TransactionDirection.OUT,
+          quantity: item.quantity,
+          referenceType: 'VolunteerStockAssignment',
+          referenceId: assignment[0]._id,
+          performedBy: new mongoose.Types.ObjectId(performedBy)
+        });
+        
+        // IN to volunteer
+        transactions.push({
+          itemId: new mongoose.Types.ObjectId(item.itemId),
+          type: TransactionType.ISSUE_TO_VOLUNTEER,
+          direction: TransactionDirection.IN,
+          quantity: item.quantity,
+          referenceType: 'VolunteerStockAssignment',
+          referenceId: assignment[0]._id,
+          performedBy: new mongoose.Types.ObjectId(volunteerId)
+        });
+      }
 
       if (session) {
         await InventoryTransaction.insertMany(transactions, { session });

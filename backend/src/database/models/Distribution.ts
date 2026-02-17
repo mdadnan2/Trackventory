@@ -28,7 +28,6 @@ const distributionSchema = new Schema<IDistribution>({
   createdAt: { type: Date, default: Date.now }
 });
 
-distributionSchema.index({ requestId: 1 });
 distributionSchema.index({ volunteerId: 1 });
 distributionSchema.index({ cityId: 1 });
 distributionSchema.index({ cityId: 1, area: 1 });

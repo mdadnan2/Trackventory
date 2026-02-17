@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { usersAPI } from '@/services/api';
 import { User } from '@/types';
 import { Users as UsersIcon, Plus, Shield, UserCheck } from 'lucide-react';
@@ -15,6 +16,7 @@ import { ToastContainer } from '@/components/ui/toast';
 import ConfirmDialog from '@/components/ui/confirm-dialog';
 
 export default function UsersPage() {
+  const router = useRouter();
   const [users, setUsers] = useState<User[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -46,10 +48,8 @@ export default function UsersPage() {
     e.preventDefault();
     try {
       await usersAPI.create(formData);
-      setFormData({ firebaseUid: '', name: '', email: '', role: 'VOLUNTEER' });
-      setShowForm(false);
-      loadUsers();
       setToast({ message: 'User created successfully!', type: 'success' });
+      setTimeout(() => router.push('/dashboard'), 1500);
     } catch (error: any) {
       setToast({ message: error.response?.data?.error || 'Error creating user', type: 'error' });
     }

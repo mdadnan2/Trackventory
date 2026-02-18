@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { citiesAPI } from '@/services/api';
-import { City } from '@/types';
+import { City, PaginatedResponse } from '@/types';
 import { MapPin, Plus } from 'lucide-react';
 import { motion } from 'framer-motion';
 import PageHeader from '@/components/ui/page-header';
@@ -11,22 +11,27 @@ import Modal from '@/components/ui/modal';
 import FormField from '@/components/ui/form-field';
 import Button from '@/components/ui/button';
 import { ToastContainer } from '@/components/ui/toast';
+import { Pagination } from '@/components/ui/pagination';
 
 export default function CitiesPage() {
   const [cities, setCities] = useState<City[]>([]);
+  const [pagination, setPagination] = useState({ currentPage: 1, totalPages: 1, totalRecords: 0, pageSize: 5 });
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null);
   const [formData, setFormData] = useState({ name: '' });
 
   useEffect(() => {
-    loadCities();
+    loadCities(pagination.currentPage);
   }, []);
 
-  const loadCities = async () => {
+  const loadCities = async (page: number) => {
     try {
-      const response = await citiesAPI.getAll();
-      setCities(response.data.data.cities);
+      setLoading(true);
+      const response = await citiesAPI.getAll(page);
+      const result: PaginatedResponse<City> = response.data.data;
+      setCities(result.data);
+      setPagination(result.pagination);
     } catch (error) {
       console.error('Error loading cities:', error);
     } finally {
@@ -40,7 +45,7 @@ export default function CitiesPage() {
       await citiesAPI.create(formData);
       setFormData({ name: '' });
       setShowForm(false);
-      loadCities();
+      loadCities(pagination.currentPage);
       setToast({ message: 'City created successfully!', type: 'success' });
     } catch (error: any) {
       setToast({ message: error.response?.data?.error || 'Error creating city', type: 'error' });
@@ -99,6 +104,11 @@ export default function CitiesPage() {
             ))}
           </div>
         )}
+        <Pagination
+          currentPage={pagination.currentPage}
+          totalPages={pagination.totalPages}
+          onPageChange={loadCities}
+        />
       </ContentCard>
 
       <Modal

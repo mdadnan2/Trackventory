@@ -29,8 +29,8 @@ export class DistributionController {
 
   async getDistributions(req: UserRequest, res: Response, next: NextFunction) {
     try {
-      const page = parseInt(req.query.page as string) || 1;
-      const limit = parseInt(req.query.limit as string) || 50;
+      const page = parseInt(req.query.page as string);
+      const limit = parseInt(req.query.limit as string);
       const filters = {
         volunteerId: req.query.volunteerId as string,
         cityId: req.query.cityId as string,

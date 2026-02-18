@@ -29,8 +29,8 @@ export default function DashboardPage() {
           reportsAPI.getStockSummary(),
           reportsAPI.getCampaignDistribution()
         ]);
-        setStockSummary(stockRes.data.data);
-        setDistributions(distRes.data.data);
+        setStockSummary(stockRes.data.data.data || []);
+        setDistributions(distRes.data.data.data || []);
       } else if (user?.role === 'VOLUNTEER') {
         const [stockRes, distRes] = await Promise.all([
           stockAPI.getVolunteerStock(user._id),
@@ -109,15 +109,15 @@ export default function DashboardPage() {
   const stats = calculateStats();
   const volunteerStats = calculateVolunteerStats();
 
-  const itemChartData = stockSummary.slice(0, 5).map(item => ({
+  const itemChartData = Array.isArray(stockSummary) ? stockSummary.slice(0, 5).map(item => ({
     name: item.item.name,
     distributed: item.totalDistributed
-  }));
+  })) : [];
 
-  const distributionTrendData = distributions.slice(0, 5).map((dist, idx) => ({
+  const distributionTrendData = Array.isArray(distributions) ? distributions.slice(0, 5).map((dist, idx) => ({
     name: dist.item?.name || `Item ${idx + 1}`,
     value: dist.totalQuantity
-  }));
+  })) : [];
 
   if (loading) {
     return <DashboardSkeleton />;

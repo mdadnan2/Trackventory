@@ -7,6 +7,7 @@ import { Item } from '../../database/models/Item';
 import { BadRequestError, NotFoundError, ConflictError } from '../../utils/errors';
 import { withTransaction } from '../../utils/transaction';
 import { StockService } from '../stock/stock.service';
+import { getPaginationParams, createPaginatedResponse } from '../../utils/pagination';
 
 const stockService = new StockService();
 
@@ -134,8 +135,9 @@ export class DistributionService {
     });
   }
 
-  async getDistributions(page: number = 1, limit: number = 50, filters?: any) {
-    const skip = (page - 1) * limit;
+  async getDistributions(page?: number, limit?: number, filters?: any) {
+    const { page: p, limit: l } = getPaginationParams(page, limit);
+    const skip = (p - 1) * l;
     const query: any = {};
 
     if (filters?.volunteerId) query.volunteerId = filters.volunteerId;
@@ -149,11 +151,11 @@ export class DistributionService {
         .populate('campaignId', 'name')
         .populate('items.itemId', 'name unit')
         .skip(skip)
-        .limit(limit)
+        .limit(l)
         .sort({ createdAt: -1 }),
       Distribution.countDocuments(query)
     ]);
 
-    return { distributions, total, page, pages: Math.ceil(total / limit) };
+    return createPaginatedResponse(distributions, total, p, l);
   }
 }

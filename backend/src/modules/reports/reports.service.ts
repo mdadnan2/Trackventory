@@ -3,9 +3,11 @@ import { InventoryTransaction, TransactionType, TransactionDirection } from '../
 import { Distribution } from '../../database/models/Distribution';
 import { Item } from '../../database/models/Item';
 import { User } from '../../database/models/User';
+import { getPaginationParams, createPaginatedResponse } from '../../utils/pagination';
 
 export class ReportsService {
-  async getCurrentStockSummary() {
+  async getCurrentStockSummary(page?: number, limit?: number) {
+    const { page: p, limit: l } = getPaginationParams(page, limit);
     const centralStock = await InventoryTransaction.aggregate([
       {
         $match: {
@@ -59,7 +61,7 @@ export class ReportsService {
       {
         $project: {
           itemId: '$_id',
-          volunteerStock: { $subtract: ['$totalIn', '$totalOut'] }
+          volunteerStock: { $max: [{ $subtract: ['$totalIn', '$totalOut'] }, 0] }
         }
       }
     ]);
@@ -117,10 +119,13 @@ export class ReportsService {
       };
     });
 
-    return summary;
+    const skip = (p - 1) * l;
+    const paginatedSummary = summary.slice(skip, skip + l);
+    return createPaginatedResponse(paginatedSummary, summary.length, p, l);
   }
 
-  async getVolunteerStockSummary() {
+  async getVolunteerStockSummary(page?: number, limit?: number) {
+    const { page: p, limit: l } = getPaginationParams(page, limit);
     const result = await InventoryTransaction.aggregate([
       {
         $match: {
@@ -189,10 +194,14 @@ export class ReportsService {
       return acc;
     }, {} as any);
 
-    return Object.values(grouped);
+    const summary = Object.values(grouped);
+    const skip = (p - 1) * l;
+    const paginatedResult = summary.slice(skip, skip + l);
+    return createPaginatedResponse(paginatedResult, summary.length, p, l);
   }
 
-  async getCampaignDistributionSummary(campaignId?: string) {
+  async getCampaignDistributionSummary(campaignId?: string, page?: number, limit?: number) {
+    const { page: p, limit: l } = getPaginationParams(page, limit);
     const match: any = {};
     if (campaignId) {
       match.campaignId = new mongoose.Types.ObjectId(campaignId);
@@ -216,15 +225,20 @@ export class ReportsService {
     const itemIds = [...new Set(result.map(r => r._id.itemId))];
     const items = await Item.find({ _id: { $in: itemIds } });
 
-    return result.map(r => ({
+    const summary = result.map(r => ({
       campaignId: r._id.campaignId,
       item: items.find(i => i._id.equals(r._id.itemId)),
       totalQuantity: r.totalQuantity,
       distributionCount: r.distributionCount
     }));
+
+    const skip = (p - 1) * l;
+    const paginatedSummary = summary.slice(skip, skip + l);
+    return createPaginatedResponse(paginatedSummary, summary.length, p, l);
   }
 
-  async getRepeatDistributionHistory() {
+  async getRepeatDistributionHistory(page?: number, limit?: number) {
+    const { page: p, limit: l } = getPaginationParams(page, limit);
     const result = await Distribution.aggregate([
       {
         $group: {
@@ -246,6 +260,8 @@ export class ReportsService {
       { $sort: { count: -1 } }
     ]);
 
-    return result;
+    const skip = (p - 1) * l;
+    const paginatedResult = result.slice(skip, skip + l);
+    return createPaginatedResponse(paginatedResult, result.length, p, l);
   }
 }

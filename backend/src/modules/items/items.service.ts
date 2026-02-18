@@ -1,5 +1,6 @@
 import { Item } from '../../database/models/Item';
 import { ConflictError, NotFoundError } from '../../utils/errors';
+import { getPaginationParams, createPaginatedResponse } from '../../utils/pagination';
 
 export class ItemsService {
   async createItem(data: { name: string; category: string; unit: string }) {
@@ -12,14 +13,15 @@ export class ItemsService {
     return item;
   }
 
-  async getItems(page: number = 1, limit: number = 50) {
-    const skip = (page - 1) * limit;
+  async getItems(page?: number, limit?: number) {
+    const { page: p, limit: l } = getPaginationParams(page, limit);
+    const skip = (p - 1) * l;
     const [items, total] = await Promise.all([
-      Item.find({ isActive: true }).skip(skip).limit(limit).sort({ name: 1 }),
+      Item.find({ isActive: true }).skip(skip).limit(l).sort({ name: 1 }),
       Item.countDocuments({ isActive: true })
     ]);
 
-    return { items, total, page, pages: Math.ceil(total / limit) };
+    return createPaginatedResponse(items, total, p, l);
   }
 
   async getItemById(id: string) {

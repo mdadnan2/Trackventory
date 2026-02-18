@@ -19,8 +19,8 @@ export class PackagesController {
 
   async getPackages(req: UserRequest, res: Response, next: NextFunction) {
     try {
-      const page = parseInt(req.query.page as string) || 1;
-      const limit = parseInt(req.query.limit as string) || 50;
+      const page = parseInt(req.query.page as string);
+      const limit = parseInt(req.query.limit as string);
       const result = await packagesService.getPackages(page, limit);
       sendSuccess(res, result);
     } catch (error) {

@@ -2,12 +2,14 @@
 
 import { useEffect, useState } from 'react';
 import { reportsAPI } from '@/services/api';
+import { PaginatedResponse } from '@/types';
 import { FileText, Download } from 'lucide-react';
 import PageHeader from '@/components/ui/page-header';
 import ContentCard from '@/components/ui/content-card';
 import DataTable from '@/components/ui/data-table';
 import Button from '@/components/ui/button';
 import Badge from '@/components/ui/badge';
+import { Pagination } from '@/components/ui/pagination';
 
 export default function ReportsPage() {
   const [activeTab, setActiveTab] = useState<'stock' | 'volunteer' | 'campaign' | 'repeat'>('stock');
@@ -15,33 +17,40 @@ export default function ReportsPage() {
   const [volunteerStock, setVolunteerStock] = useState<any[]>([]);
   const [campaignDistribution, setCampaignDistribution] = useState<any[]>([]);
   const [repeatDistribution, setRepeatDistribution] = useState<any[]>([]);
+  const [pagination, setPagination] = useState({ currentPage: 1, totalPages: 1, totalRecords: 0, pageSize: 5 });
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    loadReport();
+    loadReport(1);
   }, [activeTab]);
 
-  const loadReport = async () => {
+  const loadReport = async (page: number) => {
     setLoading(true);
     try {
+      let result: PaginatedResponse<any>;
       switch (activeTab) {
         case 'stock':
-          const stockRes = await reportsAPI.getStockSummary();
-          setStockSummary(stockRes.data.data);
+          const stockRes = await reportsAPI.getStockSummary(page);
+          result = stockRes.data.data;
+          setStockSummary(result.data);
           break;
         case 'volunteer':
-          const volunteerRes = await reportsAPI.getVolunteerStock();
-          setVolunteerStock(volunteerRes.data.data);
+          const volunteerRes = await reportsAPI.getVolunteerStock(page);
+          result = volunteerRes.data.data;
+          setVolunteerStock(result.data);
           break;
         case 'campaign':
-          const campaignRes = await reportsAPI.getCampaignDistribution();
-          setCampaignDistribution(campaignRes.data.data);
+          const campaignRes = await reportsAPI.getCampaignDistribution(undefined, page);
+          result = campaignRes.data.data;
+          setCampaignDistribution(result.data);
           break;
         case 'repeat':
-          const repeatRes = await reportsAPI.getRepeatDistribution();
-          setRepeatDistribution(repeatRes.data.data);
+          const repeatRes = await reportsAPI.getRepeatDistribution(page);
+          result = repeatRes.data.data;
+          setRepeatDistribution(result.data);
           break;
       }
+      setPagination(result!.pagination);
     } catch (error) {
       console.error('Error loading report:', error);
     } finally {
@@ -103,89 +112,117 @@ export default function ReportsPage() {
 
         <div className="p-6">
           {activeTab === 'stock' && (
-            <DataTable
-              columns={stockColumns}
-              data={stockSummary}
-              loading={loading}
-              searchPlaceholder="Search items..."
-              emptyMessage="No stock data available"
-            />
+            <>
+              <DataTable
+                columns={stockColumns}
+                data={stockSummary}
+                loading={loading}
+                searchPlaceholder="Search items..."
+                emptyMessage="No stock data available"
+              />
+              <Pagination
+                currentPage={pagination.currentPage}
+                totalPages={pagination.totalPages}
+                onPageChange={loadReport}
+              />
+            </>
           )}
 
           {activeTab === 'volunteer' && (
-            <div className="space-y-6">
-              {loading ? (
-                <div className="space-y-4">
-                  {[...Array(3)].map((_, i) => (
-                    <div key={i} className="h-32 bg-slate-100 rounded-xl animate-pulse" />
-                  ))}
-                </div>
-              ) : volunteerStock.length === 0 ? (
-                <div className="text-center py-16 text-slate-500">No volunteer stock data</div>
-              ) : (
-                volunteerStock.map((v: any, index) => (
-                  <ContentCard key={index} className="p-6" delay={index * 0.1}>
-                    <div className="flex items-center justify-between mb-4">
-                      <div>
-                        <h3 className="font-semibold text-lg text-slate-900">{v.volunteer.name}</h3>
-                        <p className="text-sm text-slate-500">{v.volunteer.email}</p>
+            <>
+              <div className="space-y-6">
+                {loading ? (
+                  <div className="space-y-4">
+                    {[...Array(3)].map((_, i) => (
+                      <div key={i} className="h-32 bg-slate-100 rounded-xl animate-pulse" />
+                    ))}
+                  </div>
+                ) : volunteerStock.length === 0 ? (
+                  <div className="text-center py-16 text-slate-500">No volunteer stock data</div>
+                ) : (
+                  volunteerStock.map((v: any, index) => (
+                    <ContentCard key={index} className="p-6" delay={index * 0.1}>
+                      <div className="flex items-center justify-between mb-4">
+                        <div>
+                          <h3 className="font-semibold text-lg text-slate-900">{v.volunteer.name}</h3>
+                          <p className="text-sm text-slate-500">{v.volunteer.email}</p>
+                        </div>
+                        <Badge variant="info">VOLUNTEER</Badge>
                       </div>
-                      <Badge variant="info">VOLUNTEER</Badge>
-                    </div>
-                    <DataTable
-                      columns={[
-                        { key: 'item', label: 'Item', render: (val: any) => val.name },
-                        { key: 'item', label: 'Unit', render: (val: any) => val.unit },
-                        { key: 'stock', label: 'Stock' }
-                      ]}
-                      data={v.items}
-                      searchable={false}
-                      emptyMessage="No items assigned"
-                    />
-                  </ContentCard>
-                ))
-              )}
-            </div>
+                      <DataTable
+                        columns={[
+                          { key: 'item', label: 'Item', render: (val: any) => val.name },
+                          { key: 'item', label: 'Unit', render: (val: any) => val.unit },
+                          { key: 'stock', label: 'Stock' }
+                        ]}
+                        data={v.items}
+                        searchable={false}
+                        emptyMessage="No items assigned"
+                      />
+                    </ContentCard>
+                  ))
+                )}
+              </div>
+              <Pagination
+                currentPage={pagination.currentPage}
+                totalPages={pagination.totalPages}
+                onPageChange={loadReport}
+              />
+            </>
           )}
 
           {activeTab === 'campaign' && (
-            <DataTable
-              columns={campaignColumns}
-              data={campaignDistribution}
-              loading={loading}
-              searchPlaceholder="Search items..."
-              emptyMessage="No campaign distribution data"
-            />
+            <>
+              <DataTable
+                columns={campaignColumns}
+                data={campaignDistribution}
+                loading={loading}
+                searchPlaceholder="Search items..."
+                emptyMessage="No campaign distribution data"
+              />
+              <Pagination
+                currentPage={pagination.currentPage}
+                totalPages={pagination.totalPages}
+                onPageChange={loadReport}
+              />
+            </>
           )}
 
           {activeTab === 'repeat' && (
-            <div className="space-y-4">
-              {loading ? (
-                <div className="space-y-3">
-                  {[...Array(5)].map((_, i) => (
-                    <div key={i} className="h-20 bg-slate-100 rounded-xl animate-pulse" />
-                  ))}
-                </div>
-              ) : repeatDistribution.length === 0 ? (
-                <div className="text-center py-16 text-slate-500">No repeat distribution data</div>
-              ) : (
-                repeatDistribution.map((area: any, index) => (
-                  <ContentCard key={index} className="p-6" delay={index * 0.05}>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="font-semibold text-slate-900">
-                          City ID: {area._id.cityId} - Area: {area._id.area}
-                        </h3>
-                        <p className="text-sm text-slate-500 mt-1">
-                          Total Distributions: {area.count}
-                        </p>
+            <>
+              <div className="space-y-4">
+                {loading ? (
+                  <div className="space-y-3">
+                    {[...Array(5)].map((_, i) => (
+                      <div key={i} className="h-20 bg-slate-100 rounded-xl animate-pulse" />
+                    ))}
+                  </div>
+                ) : repeatDistribution.length === 0 ? (
+                  <div className="text-center py-16 text-slate-500">No repeat distribution data</div>
+                ) : (
+                  repeatDistribution.map((area: any, index) => (
+                    <ContentCard key={index} className="p-6" delay={index * 0.05}>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="font-semibold text-slate-900">
+                            City ID: {area._id.cityId} - Area: {area._id.area}
+                          </h3>
+                          <p className="text-sm text-slate-500 mt-1">
+                            Total Distributions: {area.count}
+                          </p>
+                        </div>
+                        <Badge variant="warning">{area.count}x</Badge>
                       </div>
-                      <Badge variant="warning">{area.count}x</Badge>
-                    </div>
-                  </ContentCard>
-                ))
-              )}
-            </div>
+                    </ContentCard>
+                  ))
+                )}
+              </div>
+              <Pagination
+                currentPage={pagination.currentPage}
+                totalPages={pagination.totalPages}
+                onPageChange={loadReport}
+              />
+            </>
           )}
         </div>
       </ContentCard>

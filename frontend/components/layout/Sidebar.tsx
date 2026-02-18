@@ -29,7 +29,7 @@ const navItems = [
   { href: '/dashboard/cities', label: 'Cities', icon: MapPin, roles: ['ADMIN'] },
   { href: '/dashboard/campaigns', label: 'Campaigns', icon: Megaphone, roles: ['ADMIN'] },
   { href: '/dashboard/distribution', label: 'Distribution', icon: TrendingUp, roles: ['ADMIN', 'VOLUNTEER'] },
-  { href: '/dashboard/reports', label: 'Reports', icon: FileText, roles: ['ADMIN', 'VOLUNTEER'] },
+  { href: '/dashboard/reports', label: 'Reports', icon: FileText, roles: ['ADMIN'] },
 ];
 
 export default function Sidebar({ user }: SidebarProps) {
@@ -51,7 +51,7 @@ export default function Sidebar({ user }: SidebarProps) {
         </div>
       </div>
 
-      <nav className="flex-1 p-4 space-y-1">
+      <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
         {filteredItems.map((item) => {
           const isActive = pathname === item.href;
           const Icon = item.icon;

@@ -1,5 +1,6 @@
 import { City } from '../../database/models/City';
 import { ConflictError, NotFoundError } from '../../utils/errors';
+import { getPaginationParams, createPaginatedResponse } from '../../utils/pagination';
 
 export class CitiesService {
   async createCity(data: { name: string }) {
@@ -12,14 +13,15 @@ export class CitiesService {
     return city;
   }
 
-  async getCities(page: number = 1, limit: number = 100) {
-    const skip = (page - 1) * limit;
+  async getCities(page?: number, limit?: number) {
+    const { page: p, limit: l } = getPaginationParams(page, limit);
+    const skip = (p - 1) * l;
     const [cities, total] = await Promise.all([
-      City.find().skip(skip).limit(limit).sort({ name: 1 }),
+      City.find().skip(skip).limit(l).sort({ name: 1 }),
       City.countDocuments()
     ]);
 
-    return { cities, total, page, pages: Math.ceil(total / limit) };
+    return createPaginatedResponse(cities, total, p, l);
   }
 
   async getCityById(id: string) {

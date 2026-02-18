@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { campaignsAPI } from '@/services/api';
-import { Campaign } from '@/types';
+import { Campaign, PaginatedResponse } from '@/types';
 import { Megaphone, Plus, Calendar, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { motion } from 'framer-motion';
 import PageHeader from '@/components/ui/page-header';
@@ -13,9 +13,11 @@ import Button from '@/components/ui/button';
 import Badge from '@/components/ui/badge';
 import { ToastContainer } from '@/components/ui/toast';
 import ConfirmDialog from '@/components/ui/confirm-dialog';
+import { Pagination } from '@/components/ui/pagination';
 
 export default function CampaignsPage() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [pagination, setPagination] = useState({ currentPage: 1, totalPages: 1, totalRecords: 0, pageSize: 5 });
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null);
@@ -28,13 +30,16 @@ export default function CampaignsPage() {
   });
 
   useEffect(() => {
-    loadCampaigns();
+    loadCampaigns(pagination.currentPage);
   }, []);
 
-  const loadCampaigns = async () => {
+  const loadCampaigns = async (page: number) => {
     try {
-      const response = await campaignsAPI.getAll();
-      setCampaigns(response.data.data.campaigns);
+      setLoading(true);
+      const response = await campaignsAPI.getAll(page);
+      const result: PaginatedResponse<Campaign> = response.data.data;
+      setCampaigns(result.data);
+      setPagination(result.pagination);
     } catch (error) {
       console.error('Error loading campaigns:', error);
     } finally {
@@ -52,7 +57,7 @@ export default function CampaignsPage() {
       });
       setFormData({ name: '', startDate: '', endDate: '', status: 'ACTIVE' });
       setShowForm(false);
-      loadCampaigns();
+      loadCampaigns(pagination.currentPage);
       setToast({ message: 'Campaign created successfully!', type: 'success' });
     } catch (error: any) {
       setToast({ message: error.response?.data?.error || 'Error creating campaign', type: 'error' });
@@ -62,7 +67,7 @@ export default function CampaignsPage() {
   const updateStatus = async (id: string, status: 'ACTIVE' | 'COMPLETED' | 'CANCELLED') => {
     try {
       await campaignsAPI.update(id, { status });
-      loadCampaigns();
+      loadCampaigns(pagination.currentPage);
       setToast({ message: `Campaign ${status.toLowerCase()} successfully!`, type: 'success' });
       setConfirmDialog({ isOpen: false, campaignId: '', action: 'COMPLETED', campaignName: '' });
     } catch (error: any) {
@@ -177,6 +182,11 @@ export default function CampaignsPage() {
               ))}
             </div>
           )}
+          <Pagination
+            currentPage={pagination.currentPage}
+            totalPages={pagination.totalPages}
+            onPageChange={loadCampaigns}
+          />
         </ContentCard>
 
         <Modal

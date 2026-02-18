@@ -20,14 +20,14 @@ export const authAPI = {
 
 export const usersAPI = {
   create: (data: any) => api.post('/users', data),
-  getAll: (page = 1, limit = 20) => api.get(`/users?page=${page}&limit=${limit}`),
+  getAll: (page?: number, limit?: number) => api.get('/users', { params: { page, limit } }),
   getById: (id: string) => api.get(`/users/${id}`),
   update: (id: string, data: any) => api.patch(`/users/${id}`, data)
 };
 
 export const itemsAPI = {
   create: (data: any) => api.post('/items', data),
-  getAll: (page = 1, limit = 50) => api.get(`/items?page=${page}&limit=${limit}`),
+  getAll: (page?: number, limit?: number) => api.get('/items', { params: { page, limit } }),
   getById: (id: string) => api.get(`/items/${id}`),
   update: (id: string, data: any) => api.patch(`/items/${id}`, data)
 };
@@ -41,13 +41,13 @@ export const packagesAPI = {
 
 export const citiesAPI = {
   create: (data: any) => api.post('/cities', data),
-  getAll: (page = 1, limit = 100) => api.get(`/cities?page=${page}&limit=${limit}`),
+  getAll: (page?: number, limit?: number) => api.get('/cities', { params: { page, limit } }),
   getById: (id: string) => api.get(`/cities/${id}`)
 };
 
 export const campaignsAPI = {
   create: (data: any) => api.post('/campaigns', data),
-  getAll: (page = 1, limit = 50) => api.get(`/campaigns?page=${page}&limit=${limit}`),
+  getAll: (page?: number, limit?: number) => api.get('/campaigns', { params: { page, limit } }),
   getById: (id: string) => api.get(`/campaigns/${id}`),
   update: (id: string, data: any) => api.patch(`/campaigns/${id}`, data)
 };
@@ -67,11 +67,11 @@ export const distributionAPI = {
 };
 
 export const reportsAPI = {
-  getStockSummary: () => api.get('/reports/stock-summary'),
-  getVolunteerStock: () => api.get('/reports/volunteer-stock'),
-  getCampaignDistribution: (campaignId?: string) => 
-    api.get(`/reports/campaign-distribution${campaignId ? `?campaignId=${campaignId}` : ''}`),
-  getRepeatDistribution: () => api.get('/reports/repeat-distribution')
+  getStockSummary: (page?: number, limit?: number) => api.get('/reports/stock-summary', { params: { page, limit } }),
+  getVolunteerStock: (page?: number, limit?: number) => api.get('/reports/volunteer-stock', { params: { page, limit } }),
+  getCampaignDistribution: (campaignId?: string, page?: number, limit?: number) => 
+    api.get('/reports/campaign-distribution', { params: { campaignId, page, limit } }),
+  getRepeatDistribution: (page?: number, limit?: number) => api.get('/reports/repeat-distribution', { params: { page, limit } })
 };
 
 export default api;

@@ -2,6 +2,7 @@ import { Package } from '../../database/models/Package';
 import { Item } from '../../database/models/Item';
 import { NotFoundError, BadRequestError } from '../../utils/errors';
 import mongoose from 'mongoose';
+import { getPaginationParams, createPaginatedResponse } from '../../utils/pagination';
 
 export class PackagesService {
   async createPackage(data: { name: string; items: Array<{ itemId: string; quantity: number }> }) {
@@ -16,14 +17,15 @@ export class PackagesService {
     return pkg;
   }
 
-  async getPackages(page: number = 1, limit: number = 50) {
-    const skip = (page - 1) * limit;
+  async getPackages(page?: number, limit?: number) {
+    const { page: p, limit: l } = getPaginationParams(page, limit);
+    const skip = (p - 1) * l;
     const [packages, total] = await Promise.all([
-      Package.find({ isActive: true }).populate('items.itemId').skip(skip).limit(limit).sort({ name: 1 }),
+      Package.find({ isActive: true }).populate('items.itemId').skip(skip).limit(l).sort({ name: 1 }),
       Package.countDocuments({ isActive: true })
     ]);
 
-    return { packages, total, page, pages: Math.ceil(total / limit) };
+    return createPaginatedResponse(packages, total, p, l);
   }
 
   async getPackageById(id: string) {

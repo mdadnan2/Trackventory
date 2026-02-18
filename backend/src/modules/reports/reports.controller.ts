@@ -8,7 +8,9 @@ const reportsService = new ReportsService();
 export class ReportsController {
   async getCurrentStockSummary(req: UserRequest, res: Response, next: NextFunction) {
     try {
-      const summary = await reportsService.getCurrentStockSummary();
+      const page = parseInt(req.query.page as string);
+      const limit = parseInt(req.query.limit as string);
+      const summary = await reportsService.getCurrentStockSummary(page, limit);
       sendSuccess(res, summary);
     } catch (error) {
       next(error);
@@ -17,7 +19,9 @@ export class ReportsController {
 
   async getVolunteerStockSummary(req: UserRequest, res: Response, next: NextFunction) {
     try {
-      const summary = await reportsService.getVolunteerStockSummary();
+      const page = parseInt(req.query.page as string);
+      const limit = parseInt(req.query.limit as string);
+      const summary = await reportsService.getVolunteerStockSummary(page, limit);
       sendSuccess(res, summary);
     } catch (error) {
       next(error);
@@ -27,7 +31,9 @@ export class ReportsController {
   async getCampaignDistributionSummary(req: UserRequest, res: Response, next: NextFunction) {
     try {
       const campaignId = req.query.campaignId as string;
-      const summary = await reportsService.getCampaignDistributionSummary(campaignId);
+      const page = parseInt(req.query.page as string);
+      const limit = parseInt(req.query.limit as string);
+      const summary = await reportsService.getCampaignDistributionSummary(campaignId, page, limit);
       sendSuccess(res, summary);
     } catch (error) {
       next(error);
@@ -36,7 +42,9 @@ export class ReportsController {
 
   async getRepeatDistributionHistory(req: UserRequest, res: Response, next: NextFunction) {
     try {
-      const history = await reportsService.getRepeatDistributionHistory();
+      const page = parseInt(req.query.page as string);
+      const limit = parseInt(req.query.limit as string);
+      const history = await reportsService.getRepeatDistributionHistory(page, limit);
       sendSuccess(res, history);
     } catch (error) {
       next(error);

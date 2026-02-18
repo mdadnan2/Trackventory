@@ -1,5 +1,6 @@
 import { User, UserRole, UserStatus } from '../../database/models/User';
 import { ConflictError, NotFoundError } from '../../utils/errors';
+import { getPaginationParams, createPaginatedResponse } from '../../utils/pagination';
 
 export class UsersService {
   async createUser(data: { name: string; email: string; role: UserRole }) {
@@ -15,14 +16,15 @@ export class UsersService {
     return user;
   }
 
-  async getUsers(page: number = 1, limit: number = 20) {
-    const skip = (page - 1) * limit;
+  async getUsers(page?: number, limit?: number) {
+    const { page: p, limit: l } = getPaginationParams(page, limit);
+    const skip = (p - 1) * l;
     const [users, total] = await Promise.all([
-      User.find().skip(skip).limit(limit).sort({ createdAt: -1 }),
+      User.find().skip(skip).limit(l).sort({ createdAt: -1 }),
       User.countDocuments()
     ]);
 
-    return { users, total, page, pages: Math.ceil(total / limit) };
+    return createPaginatedResponse(users, total, p, l);
   }
 
   async getUserById(id: string) {

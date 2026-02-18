@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { usersAPI } from '@/services/api';
-import { User } from '@/types';
+import { User, PaginatedResponse } from '@/types';
 import { Users as UsersIcon, Plus, Shield, UserCheck } from 'lucide-react';
 import PageHeader from '@/components/ui/page-header';
 import ContentCard from '@/components/ui/content-card';
@@ -14,10 +14,12 @@ import Button from '@/components/ui/button';
 import Badge from '@/components/ui/badge';
 import { ToastContainer } from '@/components/ui/toast';
 import ConfirmDialog from '@/components/ui/confirm-dialog';
+import { Pagination } from '@/components/ui/pagination';
 
 export default function UsersPage() {
   const router = useRouter();
   const [users, setUsers] = useState<User[]>([]);
+  const [pagination, setPagination] = useState({ currentPage: 1, totalPages: 1, totalRecords: 0, pageSize: 5 });
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null);
@@ -29,13 +31,16 @@ export default function UsersPage() {
   });
 
   useEffect(() => {
-    loadUsers();
+    loadUsers(pagination.currentPage);
   }, []);
 
-  const loadUsers = async () => {
+  const loadUsers = async (page: number) => {
     try {
-      const response = await usersAPI.getAll();
-      setUsers(response.data.data.users);
+      setLoading(true);
+      const response = await usersAPI.getAll(page);
+      const result: PaginatedResponse<User> = response.data.data;
+      setUsers(result.data);
+      setPagination(result.pagination);
     } catch (error) {
       console.error('Error loading users:', error);
     } finally {
@@ -49,7 +54,7 @@ export default function UsersPage() {
       await usersAPI.create(formData);
       setToast({ message: 'User created successfully! They can now login with Google.', type: 'success' });
       setShowForm(false);
-      loadUsers();
+      loadUsers(pagination.currentPage);
     } catch (error: any) {
       setToast({ message: error.response?.data?.error?.message || 'Error creating user', type: 'error' });
     }
@@ -59,7 +64,7 @@ export default function UsersPage() {
     try {
       const newStatus = currentStatus === 'ACTIVE' ? 'BLOCKED' : 'ACTIVE';
       await usersAPI.update(userId, { status: newStatus });
-      loadUsers();
+      loadUsers(pagination.currentPage);
       setToast({ message: `User ${newStatus.toLowerCase()} successfully!`, type: 'success' });
       setConfirmDialog({ isOpen: false, userId: '', currentStatus: '', userName: '' });
     } catch (error: any) {
@@ -139,6 +144,11 @@ export default function UsersPage() {
           loading={loading}
           searchPlaceholder="Search users..."
           emptyMessage="No users found."
+        />
+        <Pagination
+          currentPage={pagination.currentPage}
+          totalPages={pagination.totalPages}
+          onPageChange={loadUsers}
         />
       </ContentCard>
 

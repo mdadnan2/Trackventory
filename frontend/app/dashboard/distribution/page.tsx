@@ -51,12 +51,12 @@ export default function DistributionPage() {
         user?.role === 'ADMIN' ? usersAPI.getAll(1, 100) : Promise.resolve({ data: { data: { users: [] } } })
       ]);
       
-      setItems(itemsRes.data.data.items);
-      setCities(citiesRes.data.data.cities);
-      setCampaigns(campaignsRes.data.data.campaigns.filter((c: Campaign) => c.status === 'ACTIVE'));
+      setItems(itemsRes.data.data.data || []);
+      setCities(citiesRes.data.data.data || []);
+      setCampaigns((campaignsRes.data.data.data || []).filter((c: Campaign) => c.status === 'ACTIVE'));
       
       if (user?.role === 'ADMIN') {
-        setVolunteers(usersRes.data.data.users.filter((u: User) => u.role === 'VOLUNTEER'));
+        setVolunteers((usersRes.data.data.data || []).filter((u: User) => u.role === 'VOLUNTEER'));
       } else if (user) {
         setSelectedVolunteer(user._id);
         loadVolunteerStock(user._id);

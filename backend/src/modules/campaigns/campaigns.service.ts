@@ -1,5 +1,6 @@
 import { Campaign, CampaignStatus } from '../../database/models/Campaign';
 import { NotFoundError } from '../../utils/errors';
+import { getPaginationParams, createPaginatedResponse } from '../../utils/pagination';
 
 export class CampaignsService {
   async createCampaign(data: { name: string; startDate: string; endDate: string }) {
@@ -11,14 +12,15 @@ export class CampaignsService {
     return campaign;
   }
 
-  async getCampaigns(page: number = 1, limit: number = 50) {
-    const skip = (page - 1) * limit;
+  async getCampaigns(page?: number, limit?: number) {
+    const { page: p, limit: l } = getPaginationParams(page, limit);
+    const skip = (p - 1) * l;
     const [campaigns, total] = await Promise.all([
-      Campaign.find().skip(skip).limit(limit).sort({ createdAt: -1 }),
+      Campaign.find().skip(skip).limit(l).sort({ createdAt: -1 }),
       Campaign.countDocuments()
     ]);
 
-    return { campaigns, total, page, pages: Math.ceil(total / limit) };
+    return createPaginatedResponse(campaigns, total, p, l);
   }
 
   async getCampaignById(id: string) {

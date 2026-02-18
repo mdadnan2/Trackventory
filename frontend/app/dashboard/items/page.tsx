@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { itemsAPI } from '@/services/api';
-import { Item } from '@/types';
+import { Item, PaginatedResponse } from '@/types';
 import { Package, Plus } from 'lucide-react';
 import PageHeader from '@/components/ui/page-header';
 import ContentCard from '@/components/ui/content-card';
@@ -11,21 +11,26 @@ import Modal from '@/components/ui/modal';
 import FormField from '@/components/ui/form-field';
 import Button from '@/components/ui/button';
 import Badge from '@/components/ui/badge';
+import { Pagination } from '@/components/ui/pagination';
 
 export default function ItemsPage() {
   const [items, setItems] = useState<Item[]>([]);
+  const [pagination, setPagination] = useState({ currentPage: 1, totalPages: 1, totalRecords: 0, pageSize: 5 });
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({ name: '', category: '', unit: '' });
 
   useEffect(() => {
-    loadItems();
+    loadItems(pagination.currentPage);
   }, []);
 
-  const loadItems = async () => {
+  const loadItems = async (page: number) => {
     try {
-      const response = await itemsAPI.getAll();
-      setItems(response.data.data.items);
+      setLoading(true);
+      const response = await itemsAPI.getAll(page);
+      const result: PaginatedResponse<Item> = response.data.data;
+      setItems(result.data);
+      setPagination(result.pagination);
     } catch (error) {
       console.error('Error loading items:', error);
     } finally {
@@ -39,7 +44,7 @@ export default function ItemsPage() {
       await itemsAPI.create(formData);
       setFormData({ name: '', category: '', unit: '' });
       setShowForm(false);
-      loadItems();
+      loadItems(pagination.currentPage);
     } catch (error: any) {
       alert(error.response?.data?.error || 'Error creating item');
     }
@@ -80,6 +85,11 @@ export default function ItemsPage() {
           loading={loading}
           searchPlaceholder="Search items..."
           emptyMessage="No items found. Add your first item to get started."
+        />
+        <Pagination
+          currentPage={pagination.currentPage}
+          totalPages={pagination.totalPages}
+          onPageChange={loadItems}
         />
       </ContentCard>
 

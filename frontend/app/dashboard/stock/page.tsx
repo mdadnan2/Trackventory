@@ -34,8 +34,8 @@ export default function StockPage() {
           itemsAPI.getAll(1, 100),
           usersAPI.getAll(1, 100)
         ]);
-        setItems(itemsRes.data.data.items);
-        setVolunteers(usersRes.data.data.users.filter((u: User) => u.role === 'VOLUNTEER'));
+        setItems(itemsRes.data.data.data || itemsRes.data.data.items || []);
+        setVolunteers(usersRes.data.data.data?.filter((u: User) => u.role === 'VOLUNTEER') || usersRes.data.data.users?.filter((u: User) => u.role === 'VOLUNTEER') || []);
       } else if (user?.role === 'VOLUNTEER') {
         const stockRes = await stockAPI.getVolunteerStock(user._id);
         setMyStock(stockRes.data.data);
@@ -47,6 +47,10 @@ export default function StockPage() {
 
   const addStockItem = () => {
     setStockItems([...stockItems, { itemId: '', quantity: 0 }]);
+  };
+
+  const removeStockItem = (index: number) => {
+    setStockItems(stockItems.filter((_, i) => i !== index));
   };
 
   const updateStockItem = (index: number, field: 'itemId' | 'quantity', value: any) => {
@@ -282,7 +286,7 @@ export default function StockPage() {
                         required
                       >
                         <option value="">Select Item</option>
-                        {items.map((i) => (
+                        {items?.map((i) => (
                           <option key={i._id} value={i._id}>{i.name} ({i.unit})</option>
                         ))}
                       </select>
@@ -334,7 +338,7 @@ export default function StockPage() {
                     required
                   >
                     <option value="">Select Volunteer</option>
-                    {volunteers.map((v) => (
+                    {volunteers?.map((v) => (
                       <option key={v._id} value={v._id}>{v.name} ({v.email})</option>
                     ))}
                   </select>
@@ -350,7 +354,7 @@ export default function StockPage() {
                         required
                       >
                         <option value="">Select Item</option>
-                        {items.map((i) => (
+                        {items?.map((i) => (
                           <option key={i._id} value={i._id}>{i.name} ({i.unit})</option>
                         ))}
                       </select>

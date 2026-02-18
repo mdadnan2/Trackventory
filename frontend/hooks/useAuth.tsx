@@ -24,17 +24,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (firebaseUser) {
         try {
           const token = await firebaseUser.getIdToken();
-          localStorage.setItem('token', token);
           const response = await authAPI.login(token);
           setUser(response.data.data.user);
         } catch (error) {
           console.error('Auth error:', error);
           setUser(null);
-          localStorage.removeItem('token');
         }
       } else {
         setUser(null);
-        localStorage.removeItem('token');
       }
       setLoading(false);
     });
@@ -54,7 +51,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signOut = async () => {
     await firebaseSignOut(auth);
     setUser(null);
-    localStorage.removeItem('token');
   };
 
   return (

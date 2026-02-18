@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { stockAPI, itemsAPI, usersAPI } from '@/services/api';
 import { Item, User, StockItem } from '@/types';
-import { Warehouse, Package, TrendingUp, AlertCircle } from 'lucide-react';
+import { Warehouse, Package, TrendingUp, AlertCircle, Plus, Minus } from 'lucide-react';
 import PageHeader from '@/components/ui/page-header';
 import ContentCard from '@/components/ui/content-card';
 import FormSection from '@/components/ui/form-section';

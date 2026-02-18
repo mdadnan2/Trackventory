@@ -23,7 +23,6 @@ export default function UsersPage() {
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{ isOpen: boolean; userId: string; currentStatus: string; userName: string }>({ isOpen: false, userId: '', currentStatus: '', userName: '' });
   const [formData, setFormData] = useState({
-    firebaseUid: '',
     name: '',
     email: '',
     role: 'VOLUNTEER' as 'ADMIN' | 'VOLUNTEER'
@@ -48,10 +47,11 @@ export default function UsersPage() {
     e.preventDefault();
     try {
       await usersAPI.create(formData);
-      setToast({ message: 'User created successfully!', type: 'success' });
-      setTimeout(() => router.push('/dashboard'), 1500);
+      setToast({ message: 'User created successfully! They can now login with Google.', type: 'success' });
+      setShowForm(false);
+      loadUsers();
     } catch (error: any) {
-      setToast({ message: error.response?.data?.error || 'Error creating user', type: 'error' });
+      setToast({ message: error.response?.data?.error?.message || 'Error creating user', type: 'error' });
     }
   };
 
@@ -81,6 +81,15 @@ export default function UsersPage() {
         <Badge variant={value === 'ADMIN' ? 'warning' : 'info'}>
           {value === 'ADMIN' ? <Shield size={12} className="inline mr-1" /> : <UserCheck size={12} className="inline mr-1" />}
           {value}
+        </Badge>
+      )
+    },
+    {
+      key: 'isOnboarded',
+      label: 'Onboarded',
+      render: (value: boolean) => (
+        <Badge variant={value ? 'success' : 'warning'}>
+          {value ? 'Yes' : 'Pending'}
         </Badge>
       )
     },
@@ -140,16 +149,6 @@ export default function UsersPage() {
         description="Create a new user account"
       >
         <form onSubmit={handleSubmit} className="space-y-6">
-          <FormField label="Firebase UID" required helper="User's Firebase authentication ID">
-            <input
-              type="text"
-              className="input"
-              value={formData.firebaseUid}
-              onChange={(e) => setFormData({ ...formData, firebaseUid: e.target.value })}
-              required
-            />
-          </FormField>
-
           <FormField label="Full Name" required>
             <input
               type="text"
@@ -161,7 +160,7 @@ export default function UsersPage() {
             />
           </FormField>
 
-          <FormField label="Email Address" required>
+          <FormField label="Email Address" required helper="User will login with this Google account">
             <input
               type="email"
               className="input"

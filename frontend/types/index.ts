@@ -1,10 +1,11 @@
 export interface User {
   _id: string;
-  firebaseUid: string;
+  firebaseUid?: string;
   name: string;
   email: string;
   role: 'ADMIN' | 'VOLUNTEER';
   status: 'ACTIVE' | 'BLOCKED';
+  isOnboarded: boolean;
   createdAt: string;
 }
 

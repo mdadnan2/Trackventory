@@ -41,9 +41,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signInWithGoogle = async () => {
     try {
-      await signInWithPopup(auth, googleProvider);
-    } catch (error) {
+      const result = await signInWithPopup(auth, googleProvider);
+      const token = await result.user.getIdToken();
+      const response = await authAPI.login(token);
+      setUser(response.data.data.user);
+    } catch (error: any) {
       console.error('Sign in error:', error);
+      await firebaseSignOut(auth);
       throw error;
     }
   };

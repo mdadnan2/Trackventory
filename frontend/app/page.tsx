@@ -1,18 +1,29 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 
 export default function LoginPage() {
   const { user, loading, signInWithGoogle } = useAuth();
   const router = useRouter();
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
       router.push('/dashboard');
     }
   }, [user, router]);
+
+  const handleSignIn = async () => {
+    setErrorMessage(null);
+    try {
+      await signInWithGoogle();
+    } catch (error: any) {
+      const message = error?.response?.data?.error?.message || 'Login failed. Please try again.';
+      setErrorMessage(message);
+    }
+  };
 
   if (loading) {
     return (
@@ -28,8 +39,14 @@ export default function LoginPage() {
         <h1 className="text-3xl font-bold text-center mb-2">Trackventory</h1>
         <p className="text-gray-600 text-center mb-8">Distribution Management System</p>
         
+        {errorMessage && (
+          <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-red-800 text-sm text-center font-medium">{errorMessage}</p>
+          </div>
+        )}
+        
         <button
-          onClick={signInWithGoogle}
+          onClick={handleSignIn}
           className="w-full btn btn-primary py-3 text-lg flex items-center justify-center gap-3"
         >
           <svg className="w-6 h-6" viewBox="0 0 24 24">

@@ -2,13 +2,16 @@ import { User, UserRole, UserStatus } from '../../database/models/User';
 import { ConflictError, NotFoundError } from '../../utils/errors';
 
 export class UsersService {
-  async createUser(data: { firebaseUid: string; name: string; email: string; role: UserRole }) {
-    const existing = await User.findOne({ $or: [{ firebaseUid: data.firebaseUid }, { email: data.email }] });
+  async createUser(data: { name: string; email: string; role: UserRole }) {
+    const existing = await User.findOne({ email: data.email });
     if (existing) {
-      throw new ConflictError('User already exists');
+      throw new ConflictError('User with this email already exists');
     }
 
-    const user = await User.create(data);
+    const user = await User.create({
+      ...data,
+      isOnboarded: false
+    });
     return user;
   }
 

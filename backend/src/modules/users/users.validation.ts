@@ -1,10 +1,9 @@
 import { z } from 'zod';
 
 export const createUserSchema = z.object({
-  firebaseUid: z.string(),
   name: z.string().min(1),
   email: z.string().email(),
-  role: z.enum(['ADMIN', 'VOLUNTEER'])
+  role: z.enum(['ADMIN', 'VOLUNTEER']).default('VOLUNTEER')
 });
 
 export const updateUserSchema = z.object({

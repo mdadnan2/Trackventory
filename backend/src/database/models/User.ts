@@ -11,20 +11,22 @@ export enum UserStatus {
 }
 
 export interface IUser extends Document {
-  firebaseUid: string;
+  firebaseUid?: string;
   name: string;
   email: string;
   role: UserRole;
   status: UserStatus;
+  isOnboarded: boolean;
   createdAt: Date;
 }
 
 const userSchema = new Schema<IUser>({
-  firebaseUid: { type: String, required: true, unique: true },
+  firebaseUid: { type: String, unique: true, sparse: true },
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true },
   role: { type: String, enum: Object.values(UserRole), required: true },
   status: { type: String, enum: Object.values(UserStatus), default: UserStatus.ACTIVE },
+  isOnboarded: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now }
 });
 

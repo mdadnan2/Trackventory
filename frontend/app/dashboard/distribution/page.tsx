@@ -1,8 +1,10 @@
 'use client';
 
+import { useAuth } from '@/hooks/useAuth';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import MobileDistribute from '@/components/mobile-volunteer/mobile-pages/distribute';
 import { useEffect, useState } from 'react';
 import { distributionAPI, itemsAPI, citiesAPI, campaignsAPI, stockAPI, usersAPI } from '@/services/api';
-import { useAuth } from '@/hooks/useAuth';
 import { Item, City, Campaign, User } from '@/types';
 import { TrendingUp, MapPin, Package, AlertTriangle, Plus, Minus } from 'lucide-react';
 import PageHeader from '@/components/ui/page-header';
@@ -14,6 +16,7 @@ import { ToastContainer } from '@/components/ui/toast';
 
 export default function DistributionPage() {
   const { user } = useAuth();
+  const isMobile = useIsMobile();
   const [items, setItems] = useState<Item[]>([]);
   const [cities, setCities] = useState<City[]>([]);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
@@ -128,6 +131,10 @@ export default function DistributionPage() {
     const stock = myStock.find(s => s.itemId === itemId);
     return stock?.stock || 0;
   };
+
+  if (isMobile && user?.role === 'VOLUNTEER') {
+    return <MobileDistribute />;
+  }
 
   return (
     <>

@@ -1,8 +1,10 @@
 'use client';
 
+import { useAuth } from '@/hooks/useAuth';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import MobileHistory from '@/components/mobile-volunteer/mobile-pages/history';
 import { useEffect, useState } from 'react';
 import { stockAPI, usersAPI } from '@/services/api';
-import { useAuth } from '@/hooks/useAuth';
 import { StockItem, User } from '@/types';
 import { Package, Users, TrendingUp, AlertCircle } from 'lucide-react';
 import PageHeader from '@/components/ui/page-header';
@@ -10,6 +12,7 @@ import ContentCard from '@/components/ui/content-card';
 
 export default function InventoryPage() {
   const { user } = useAuth();
+  const isMobile = useIsMobile();
   const [centralStock, setCentralStock] = useState<StockItem[]>([]);
   const [volunteers, setVolunteers] = useState<User[]>([]);
   const [selectedVolunteer, setSelectedVolunteer] = useState<string>('');
@@ -60,6 +63,10 @@ export default function InventoryPage() {
   const totalCentralStock = centralStock.reduce((sum, item) => sum + item.stock, 0);
   const totalVolunteerStock = volunteerStock.reduce((sum, item) => sum + item.stock, 0);
   const lowStockItems = centralStock.filter(item => item.stock < 10).length;
+
+  if (isMobile && user?.role === 'VOLUNTEER') {
+    return <MobileHistory />;
+  }
 
   if (user?.role === 'VOLUNTEER') {
     return (

@@ -1,5 +1,8 @@
 'use client';
 
+import { useAuth } from '@/hooks/useAuth';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import MobileStock from '@/components/mobile-volunteer/mobile-pages/stock';
 import { useEffect, useState } from 'react';
 import { stockAPI, itemsAPI, usersAPI } from '@/services/api';
 import { Item, User, StockItem } from '@/types';
@@ -10,11 +13,11 @@ import FormSection from '@/components/ui/form-section';
 import FormField from '@/components/ui/form-field';
 import Button from '@/components/ui/button';
 import { ToastContainer } from '@/components/ui/toast';
-import { useAuth } from '@/hooks/useAuth';
 import { motion } from 'framer-motion';
 
 export default function StockPage() {
   const { user } = useAuth();
+  const isMobile = useIsMobile();
   const [items, setItems] = useState<Item[]>([]);
   const [volunteers, setVolunteers] = useState<User[]>([]);
   const [myStock, setMyStock] = useState<StockItem[]>([]);
@@ -92,6 +95,10 @@ export default function StockPage() {
   };
 
   if (user?.role === 'VOLUNTEER') {
+    if (isMobile) {
+      return <MobileStock />;
+    }
+
     return (
       <>
         <ToastContainer toast={toast} onClose={() => setToast(null)} />

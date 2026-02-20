@@ -1,13 +1,20 @@
 'use client';
 
 import { useAuth } from '@/hooks/useAuth';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import MobileMore from '@/components/mobile-volunteer/mobile-pages/more';
 import { motion } from 'framer-motion';
 import { User, Mail, Shield, Calendar, Key } from 'lucide-react';
 
 export default function ProfilePage() {
   const { user } = useAuth();
+  const isMobile = useIsMobile();
 
   if (!user) return null;
+
+  if (isMobile && user.role === 'VOLUNTEER') {
+    return <MobileMore />;
+  }
 
   const formatDate = (dateString: string) => {
     if (!dateString) return 'Not available';

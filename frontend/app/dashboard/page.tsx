@@ -1,7 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import MobileHome from '@/components/mobile-volunteer/mobile-pages/home';
+import { useEffect, useState } from 'react';
 import { stockAPI, reportsAPI, distributionAPI } from '@/services/api';
 import { motion } from 'framer-motion';
 import { Warehouse, Users, TrendingUp, AlertTriangle, Package, Clock, CheckCircle, MapPin, Calendar, AlertCircle } from 'lucide-react';
@@ -12,6 +14,7 @@ import DashboardSkeleton from '@/components/ui/loading-skeleton';
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const isMobile = useIsMobile();
   const [stockSummary, setStockSummary] = useState<any[]>([]);
   const [volunteerStock, setVolunteerStock] = useState<any>(null);
   const [distributions, setDistributions] = useState<any[]>([]);
@@ -121,6 +124,10 @@ export default function DashboardPage() {
 
   if (loading) {
     return <DashboardSkeleton />;
+  }
+
+  if (isMobile && user?.role === 'VOLUNTEER') {
+    return <MobileHome />;
   }
 
   return (

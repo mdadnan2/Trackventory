@@ -8,6 +8,16 @@
   }
 }
 
+@layer utilities {
+  .safe-area-pb {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  
+  .active\:scale-98:active {
+    transform: scale(0.98);
+  }
+}
+
 @layer components {
   .btn {
     @apply px-4 py-2 rounded-xl font-medium transition-all duration-200;

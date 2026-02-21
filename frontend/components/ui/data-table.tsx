@@ -17,6 +17,7 @@ interface DataTableProps {
   searchPlaceholder?: string;
   emptyMessage?: string;
   loading?: boolean;
+  action?: ReactNode;
 }
 
 export default function DataTable({
@@ -25,7 +26,8 @@ export default function DataTable({
   searchable = true,
   searchPlaceholder = 'Search...',
   emptyMessage = 'No data found',
-  loading = false
+  loading = false,
+  action
 }: DataTableProps) {
   const [search, setSearch] = useState('');
 
@@ -48,15 +50,18 @@ export default function DataTable({
   return (
     <div className="space-y-4">
       {searchable && (
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
-          <input
-            type="text"
-            placeholder={searchPlaceholder}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
-          />
+        <div className="flex gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+            <input
+              type="text"
+              placeholder={searchPlaceholder}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+            />
+          </div>
+          {action && <div className="shrink-0">{action}</div>}
         </div>
       )}
 

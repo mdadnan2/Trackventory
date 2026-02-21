@@ -33,7 +33,7 @@ export class DistributionController {
       const limit = parseInt(req.query.limit as string);
       const filters = {
         volunteerId: req.query.volunteerId as string,
-        cityId: req.query.cityId as string,
+        city: req.query.city as string,
         campaignId: req.query.campaignId as string
       };
       const result = await distributionService.getDistributions(page, limit, filters);

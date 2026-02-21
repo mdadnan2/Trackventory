@@ -44,7 +44,9 @@ export interface Campaign {
 export interface Distribution {
   _id: string;
   volunteerId: string;
-  cityId: string;
+  state: string;
+  city: string;
+  pinCode: string;
   area: string;
   campaignId?: string;
   items: Array<{ itemId: string; quantity: number }>;

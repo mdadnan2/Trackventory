@@ -10,9 +10,11 @@ import { useRouter } from 'next/navigation';
 interface HeaderProps {
   user: UserType | null;
   onSignOut: () => void;
+  title?: string;
+  description?: string;
 }
 
-export default function Header({ user, onSignOut }: HeaderProps) {
+export default function Header({ user, onSignOut, title, description }: HeaderProps) {
   const [showMenu, setShowMenu] = useState(false);
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const router = useRouter();
@@ -35,7 +37,17 @@ export default function Header({ user, onSignOut }: HeaderProps) {
   return (
     <>
       <header className="flex-shrink-0 h-16 bg-white border-b border-slate-200 z-10">
-        <div className="h-full px-4 lg:pl-8 lg:pr-4 flex items-center justify-end">
+        <div className="h-full px-4 lg:pl-8 lg:pr-4 flex items-center justify-between">
+          <div className="text-slate-700">
+            {title ? (
+              <div>
+                <h1 className="text-lg lg:text-xl font-bold text-slate-900">{title}</h1>
+                {description && <p className="text-xs lg:text-sm text-slate-500">{description}</p>}
+              </div>
+            ) : (
+              <span className="text-sm lg:text-base">Welcome back, <span className="font-semibold">{user?.name}</span></span>
+            )}
+          </div>
           <div className="flex items-center">
             <div className="relative">
               <button

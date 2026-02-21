@@ -126,17 +126,6 @@ export default function UsersPage() {
     <>
       <ToastContainer toast={toast} onClose={() => setToast(null)} />
       <div className="space-y-6">
-      <PageHeader
-        title="Users"
-        description="Manage user accounts and permissions"
-        icon={UsersIcon}
-        action={
-          <Button icon={Plus} onClick={() => setShowForm(true)}>
-            Add User
-          </Button>
-        }
-      />
-
       <ContentCard className="p-6">
         <DataTable
           columns={columns}
@@ -144,6 +133,11 @@ export default function UsersPage() {
           loading={loading}
           searchPlaceholder="Search users..."
           emptyMessage="No users found."
+          action={
+            <Button onClick={() => setShowForm(true)}>
+              Add
+            </Button>
+          }
         />
         <Pagination
           currentPage={pagination.currentPage}

@@ -3,12 +3,13 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useOfflineQueue } from '@/hooks/useOfflineQueue';
-import { stockAPI, distributionAPI, citiesAPI, campaignsAPI } from '@/services/api';
+import { stockAPI, distributionAPI, campaignsAPI } from '@/services/api';
 import ScreenContainer from '../ScreenContainer';
 import ActionCard from '../ActionCard';
 import QuantityStepper from '../QuantityStepper';
 import StickyActionBar from '../StickyActionBar';
 import { CheckCircle, MapPin, Package, Megaphone } from 'lucide-react';
+import { State, City } from 'country-state-city';
 
 export default function MobileDistribute() {
   const { user } = useAuth();
@@ -16,34 +17,59 @@ export default function MobileDistribute() {
   const [step, setStep] = useState(1);
   const [stock, setStock] = useState<any[]>([]);
   const [campaigns, setCampaigns] = useState<any[]>([]);
+  const [states, setStates] = useState<any[]>([]);
   const [cities, setCities] = useState<any[]>([]);
   const [selectedCampaign, setSelectedCampaign] = useState('');
   const [selectedItems, setSelectedItems] = useState<Record<string, number>>({});
+  const [selectedState, setSelectedState] = useState('');
   const [selectedCity, setSelectedCity] = useState('');
+  const [pinCode, setPinCode] = useState('');
   const [selectedArea, setSelectedArea] = useState('');
   const [beneficiaryCount, setBeneficiaryCount] = useState(1);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     loadData();
+    loadStates();
   }, [user]);
+
+  useEffect(() => {
+    if (selectedState) {
+      loadCities(selectedState);
+    } else {
+      setCities([]);
+      setSelectedCity('');
+    }
+  }, [selectedState]);
 
   const loadData = async () => {
     try {
       if (user?._id) {
-        const [stockRes, citiesRes, campaignRes] = await Promise.all([
+        const [stockRes, campaignRes] = await Promise.all([
           stockAPI.getVolunteerStock(user._id),
-          citiesAPI.getAll(),
           campaignsAPI.getAll(1, 100),
         ]);
         setStock(stockRes.data.data || []);
-        setCities(citiesRes.data.data?.data || citiesRes.data.data || []);
         const active = (campaignRes.data.data?.data || []).filter((c: any) => c.status === 'ACTIVE');
         setCampaigns(active);
         if (active.length === 1) setSelectedCampaign(active[0]._id);
       }
     } catch (error) {
       console.error('Error loading data:', error);
+    }
+  };
+
+  const loadStates = () => {
+    const indianStates = State.getStatesOfCountry('IN');
+    setStates(indianStates);
+  };
+
+  const loadCities = (stateName: string) => {
+    const indianStates = State.getStatesOfCountry('IN');
+    const selectedStateObj = indianStates.find(s => s.name === stateName);
+    if (selectedStateObj) {
+      const stateCities = City.getCitiesOfState('IN', selectedStateObj.isoCode);
+      setCities(stateCities);
     }
   };
 
@@ -56,7 +82,9 @@ export default function MobileDistribute() {
 
       const payload = {
         items,
-        cityId: selectedCity,
+        state: selectedState,
+        city: selectedCity,
+        pinCode,
         area: selectedArea,
         campaignId: selectedCampaign || undefined,
       };
@@ -78,7 +106,9 @@ export default function MobileDistribute() {
         items: Object.entries(selectedItems)
           .filter(([_, qty]) => qty > 0)
           .map(([itemId, quantity]) => ({ itemId, quantity })),
-        cityId: selectedCity,
+        state: selectedState,
+        city: selectedCity,
+        pinCode,
         area: selectedArea,
         campaignId: selectedCampaign,
       });
@@ -91,15 +121,16 @@ export default function MobileDistribute() {
   const resetForm = () => {
     setStep(1);
     setSelectedItems({});
+    setSelectedState('');
     setSelectedCity('');
+    setPinCode('');
     setSelectedArea('');
     setBeneficiaryCount(1);
   };
 
-  const selectedCity_obj = Array.isArray(cities) ? cities.find((c) => c._id === selectedCity) : null;
   const canProceed1 = campaigns.length === 0 || selectedCampaign;
   const canProceed2 = Object.values(selectedItems).some((qty) => qty > 0);
-  const canProceed3 = selectedCity && selectedArea;
+  const canProceed3 = selectedState && selectedCity && pinCode && selectedArea;
   const canProceed4 = beneficiaryCount > 0;
 
   return (
@@ -191,40 +222,60 @@ export default function MobileDistribute() {
             <ActionCard>
               <div className="space-y-4">
                 <div>
-                  <label className="text-sm font-semibold text-slate-700 mb-2 block">City</label>
+                  <label className="text-sm font-semibold text-slate-700 mb-2 block">State</label>
                   <select
-                    value={selectedCity}
+                    value={selectedState}
                     onChange={(e) => {
-                      setSelectedCity(e.target.value);
-                      setSelectedArea('');
+                      setSelectedState(e.target.value);
+                      setSelectedCity('');
                     }}
                     className="w-full h-14 px-4 border-2 border-slate-200 rounded-xl text-base bg-white"
                   >
-                    <option value="">Select City</option>
-                    {Array.isArray(cities) && cities.map((city) => (
-                      <option key={city._id} value={city._id}>
-                        {city.name}
+                    <option value="">Select State</option>
+                    {states.map((state) => (
+                      <option key={state.isoCode} value={state.name}>
+                        {state.name}
                       </option>
                     ))}
                   </select>
                 </div>
-                {selectedCity && selectedCity_obj && (
+                {selectedState && (
                   <div>
-                    <label className="text-sm font-semibold text-slate-700 mb-2 block">Area</label>
+                    <label className="text-sm font-semibold text-slate-700 mb-2 block">City</label>
                     <select
-                      value={selectedArea}
-                      onChange={(e) => setSelectedArea(e.target.value)}
+                      value={selectedCity}
+                      onChange={(e) => setSelectedCity(e.target.value)}
                       className="w-full h-14 px-4 border-2 border-slate-200 rounded-xl text-base bg-white"
                     >
-                      <option value="">Select Area</option>
-                      {selectedCity_obj.areas?.map((area: string) => (
-                        <option key={area} value={area}>
-                          {area}
+                      <option value="">Select City</option>
+                      {cities.map((city) => (
+                        <option key={city.name} value={city.name}>
+                          {city.name}
                         </option>
                       ))}
                     </select>
                   </div>
                 )}
+                <div>
+                  <label className="text-sm font-semibold text-slate-700 mb-2 block">Pin Code</label>
+                  <input
+                    type="text"
+                    value={pinCode}
+                    onChange={(e) => setPinCode(e.target.value)}
+                    placeholder="Enter pin code"
+                    className="w-full h-14 px-4 border-2 border-slate-200 rounded-xl text-base"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-semibold text-slate-700 mb-2 block">Area</label>
+                  <input
+                    type="text"
+                    value={selectedArea}
+                    onChange={(e) => setSelectedArea(e.target.value)}
+                    placeholder="Enter area name"
+                    className="w-full h-14 px-4 border-2 border-slate-200 rounded-xl text-base"
+                  />
+                </div>
               </div>
             </ActionCard>
           </>
@@ -288,7 +339,7 @@ export default function MobileDistribute() {
                   <div className="flex items-center gap-2">
                     <MapPin size={16} className="text-slate-400" />
                     <span className="font-medium">
-                      {selectedArea}, {selectedCity_obj?.name}
+                      {selectedArea}, {selectedCity}, {selectedState} - {pinCode}
                     </span>
                   </div>
                 </div>

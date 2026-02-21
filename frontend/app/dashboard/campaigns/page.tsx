@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { campaignsAPI } from '@/services/api';
 import { Campaign, PaginatedResponse } from '@/types';
-import { Megaphone, Plus, Calendar, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { Megaphone, Plus, Calendar, CheckCircle, XCircle, Clock, Search } from 'lucide-react';
 import { motion } from 'framer-motion';
 import PageHeader from '@/components/ui/page-header';
 import ContentCard from '@/components/ui/content-card';
@@ -20,6 +20,7 @@ export default function CampaignsPage() {
   const [pagination, setPagination] = useState({ currentPage: 1, totalPages: 1, totalRecords: 0, pageSize: 5 });
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{ isOpen: boolean; campaignId: string; action: 'COMPLETED' | 'CANCELLED'; campaignName: string }>({ isOpen: false, campaignId: '', action: 'COMPLETED', campaignName: '' });
   const [formData, setFormData] = useState({
@@ -97,36 +98,45 @@ export default function CampaignsPage() {
     }
   };
 
+  const filteredCampaigns = campaigns.filter(campaign =>
+    campaign.name.toLowerCase().includes(search.toLowerCase()) ||
+    campaign.status.toLowerCase().includes(search.toLowerCase())
+  );
+
   return (
     <>
       <ToastContainer toast={toast} onClose={() => setToast(null)} />
       <div className="space-y-6">
-        <PageHeader
-          title="Campaigns"
-          description="Manage distribution campaigns and relief efforts"
-          icon={Megaphone}
-          action={
-            <Button icon={Plus} onClick={() => setShowForm(true)}>
-              Create Campaign
-            </Button>
-          }
-        />
-
         <ContentCard className="p-6">
+          <div className="flex gap-3 mb-6">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+              <input
+                type="text"
+                placeholder="Search campaigns..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+              />
+            </div>
+            <Button onClick={() => setShowForm(true)}>
+              Add
+            </Button>
+          </div>
           {loading ? (
             <div className="space-y-4">
               {[...Array(3)].map((_, i) => (
                 <div key={i} className="h-32 bg-slate-100 rounded-xl animate-pulse" />
               ))}
             </div>
-          ) : campaigns.length === 0 ? (
+          ) : filteredCampaigns.length === 0 ? (
             <div className="text-center py-16">
               <Megaphone size={48} className="mx-auto text-slate-300 mb-4" />
-              <p className="text-slate-500">No campaigns found. Create your first campaign to get started.</p>
+              <p className="text-slate-500">{search ? 'No campaigns match your search.' : 'No campaigns found. Create your first campaign to get started.'}</p>
             </div>
           ) : (
             <div className="space-y-4">
-              {campaigns.map((campaign, idx) => (
+              {filteredCampaigns.map((campaign, idx) => (
                 <motion.div
                   key={campaign._id}
                   initial={{ opacity: 0, y: 20 }}

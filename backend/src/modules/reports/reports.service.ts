@@ -338,7 +338,7 @@ export class ReportsService {
     const result = await Distribution.aggregate([
       {
         $group: {
-          _id: { cityId: '$cityId', area: '$area' },
+          _id: { city: '$city', area: '$area' },
           distributions: {
             $push: {
               id: '$_id',

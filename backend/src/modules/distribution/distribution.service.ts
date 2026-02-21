@@ -1,7 +1,6 @@
 import mongoose from 'mongoose';
 import { Distribution } from '../../database/models/Distribution';
 import { InventoryTransaction, TransactionType, TransactionDirection } from '../../database/models/InventoryTransaction';
-import { City } from '../../database/models/City';
 import { Campaign } from '../../database/models/Campaign';
 import { Item } from '../../database/models/Item';
 import { BadRequestError, NotFoundError, ConflictError } from '../../utils/errors';
@@ -15,7 +14,9 @@ export class DistributionService {
   async createDistribution(
     volunteerId: string,
     data: {
-      cityId: string;
+      state: string;
+      city: string;
+      pinCode: string;
       area: string;
       campaignId?: string;
       items: Array<{ itemId: string; quantity: number }>;
@@ -26,11 +27,6 @@ export class DistributionService {
       const existingDistribution = await Distribution.findOne({ requestId: data.requestId }).session(session);
       if (existingDistribution) {
         throw new ConflictError('Distribution already recorded (duplicate requestId)');
-      }
-
-      const city = await City.findById(data.cityId).session(session);
-      if (!city) {
-        throw new NotFoundError('City not found');
       }
 
       if (data.campaignId) {
@@ -59,7 +55,9 @@ export class DistributionService {
 
       const distribution = await Distribution.create([{
         volunteerId: new mongoose.Types.ObjectId(volunteerId),
-        cityId: new mongoose.Types.ObjectId(data.cityId),
+        state: data.state,
+        city: data.city,
+        pinCode: data.pinCode,
         area: data.area,
         campaignId: data.campaignId ? new mongoose.Types.ObjectId(data.campaignId) : undefined,
         items: data.items.map(i => ({
@@ -140,14 +138,15 @@ export class DistributionService {
     const skip = (p - 1) * l;
     const query: any = {};
 
-    if (filters?.volunteerId) query.volunteerId = filters.volunteerId;
-    if (filters?.cityId) query.cityId = filters.cityId;
-    if (filters?.campaignId) query.campaignId = filters.campaignId;
+    if (filters?.volunteerId) query.volunteerId = new mongoose.Types.ObjectId(filters.volunteerId);
+    if (filters?.city) query.city = filters.city;
+    if (filters?.campaignId) query.campaignId = new mongoose.Types.ObjectId(filters.campaignId);
+
+    console.log('Distribution Query:', query);
 
     const [distributions, total] = await Promise.all([
       Distribution.find(query)
         .populate('volunteerId', 'name email')
-        .populate('cityId', 'name')
         .populate('campaignId', 'name')
         .populate('items.itemId', 'name unit')
         .skip(skip)
@@ -155,6 +154,8 @@ export class DistributionService {
         .sort({ createdAt: -1 }),
       Distribution.countDocuments(query)
     ]);
+
+    console.log('Found distributions:', distributions.length, 'Total:', total);
 
     return createPaginatedResponse(distributions, total, p, l);
   }

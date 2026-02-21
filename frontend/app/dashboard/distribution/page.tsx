@@ -4,8 +4,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import MobileDistribute from '@/components/mobile-volunteer/mobile-pages/distribute';
 import { useEffect, useState } from 'react';
-import { distributionAPI, itemsAPI, citiesAPI, campaignsAPI, stockAPI, usersAPI } from '@/services/api';
-import { Item, City, Campaign, User } from '@/types';
+import { distributionAPI, itemsAPI, campaignsAPI, stockAPI, usersAPI } from '@/services/api';
+import { Item, Campaign, User } from '@/types';
 import { TrendingUp, MapPin, Package, AlertTriangle, Plus, Minus } from 'lucide-react';
 import PageHeader from '@/components/ui/page-header';
 import ContentCard from '@/components/ui/content-card';
@@ -13,12 +13,13 @@ import FormSection from '@/components/ui/form-section';
 import FormField from '@/components/ui/form-field';
 import Button from '@/components/ui/button';
 import { ToastContainer } from '@/components/ui/toast';
+import { Combobox } from '@/components/ui/combobox';
+import { State, City } from 'country-state-city';
 
 export default function DistributionPage() {
   const { user } = useAuth();
   const isMobile = useIsMobile();
   const [items, setItems] = useState<Item[]>([]);
-  const [cities, setCities] = useState<City[]>([]);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [volunteers, setVolunteers] = useState<User[]>([]);
   const [selectedVolunteer, setSelectedVolunteer] = useState<string>('');
@@ -26,8 +27,13 @@ export default function DistributionPage() {
   const [activeTab, setActiveTab] = useState<'distribute' | 'damage'>('distribute');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null);
   
+  const [states, setStates] = useState<string[]>([]);
+  const [cities, setCities] = useState<string[]>([]);
+  
   const [formData, setFormData] = useState({
-    cityId: '',
+    state: '',
+    city: '',
+    pinCode: '',
     area: '',
     campaignId: '',
     items: [{ itemId: '', quantity: 0 }]
@@ -35,7 +41,17 @@ export default function DistributionPage() {
 
   useEffect(() => {
     loadData();
+    loadStates();
   }, [user]);
+
+  useEffect(() => {
+    if (formData.state) {
+      loadCities(formData.state);
+    } else {
+      setCities([]);
+      setFormData(prev => ({ ...prev, city: '' }));
+    }
+  }, [formData.state]);
 
   useEffect(() => {
     if (selectedVolunteer) {
@@ -47,15 +63,13 @@ export default function DistributionPage() {
 
   const loadData = async () => {
     try {
-      const [itemsRes, citiesRes, campaignsRes, usersRes] = await Promise.all([
+      const [itemsRes, campaignsRes, usersRes] = await Promise.all([
         itemsAPI.getAll(1, 100),
-        citiesAPI.getAll(1, 100),
         campaignsAPI.getAll(1, 100),
         user?.role === 'ADMIN' ? usersAPI.getAll(1, 100) : Promise.resolve({ data: { data: { users: [] } } })
       ]);
       
       setItems(itemsRes.data.data.data || []);
-      setCities(citiesRes.data.data.data || []);
       setCampaigns((campaignsRes.data.data.data || []).filter((c: Campaign) => c.status === 'ACTIVE'));
       
       if (user?.role === 'ADMIN') {
@@ -66,6 +80,20 @@ export default function DistributionPage() {
       }
     } catch (error) {
       console.error('Error loading data:', error);
+    }
+  };
+
+  const loadStates = () => {
+    const indianStates = State.getStatesOfCountry('IN');
+    setStates(indianStates.map(s => s.name));
+  };
+
+  const loadCities = (stateName: string) => {
+    const indianStates = State.getStatesOfCountry('IN');
+    const selectedState = indianStates.find(s => s.name === stateName);
+    if (selectedState) {
+      const stateCities = City.getCitiesOfState('IN', selectedState.isoCode);
+      setCities(stateCities.map(c => c.name));
     }
   };
 
@@ -85,9 +113,13 @@ export default function DistributionPage() {
     });
   };
 
-  const updateItem = (index: number, field: 'itemId' | 'quantity', value: any) => {
+  const updateItem = (index: number, field: 'itemId' | 'quantity', value: string | number) => {
     const updated = [...formData.items];
-    updated[index][field] = value;
+    if (field === 'itemId') {
+      updated[index].itemId = value as string;
+    } else {
+      updated[index].quantity = value as number;
+    }
     setFormData({ ...formData, items: updated });
   };
 
@@ -105,7 +137,7 @@ export default function DistributionPage() {
       const requestId = `${volunteerId}-${Date.now()}`;
       await distributionAPI.create({ ...formData, requestId });
       setToast({ message: 'Distribution recorded successfully!', type: 'success' });
-      setFormData({ cityId: '', area: '', campaignId: '', items: [{ itemId: '', quantity: 0 }] });
+      setFormData({ state: '', city: '', pinCode: '', area: '', campaignId: '', items: [{ itemId: '', quantity: 0 }] });
       loadVolunteerStock(volunteerId!);
     } catch (error: any) {
       setToast({ message: error.response?.data?.error || 'Error recording distribution', type: 'error' });
@@ -119,7 +151,7 @@ export default function DistributionPage() {
       const requestId = `damage-${volunteerId}-${Date.now()}`;
       await distributionAPI.reportDamage({ items: formData.items, requestId });
       setToast({ message: 'Damage reported successfully!', type: 'success' });
-      setFormData({ cityId: '', area: '', campaignId: '', items: [{ itemId: '', quantity: 0 }] });
+      setFormData({ state: '', city: '', pinCode: '', area: '', campaignId: '', items: [{ itemId: '', quantity: 0 }] });
       loadVolunteerStock(volunteerId!);
     } catch (error: any) {
       setToast({ message: error.response?.data?.error || 'Error reporting damage', type: 'error' });
@@ -140,12 +172,6 @@ export default function DistributionPage() {
     <>
       <ToastContainer toast={toast} onClose={() => setToast(null)} />
       <div className="space-y-6">
-      <PageHeader
-        title="Distribution"
-        description="Record distributions and report damages"
-        icon={TrendingUp}
-      />
-
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
           <ContentCard>
@@ -200,18 +226,34 @@ export default function DistributionPage() {
                   )}
 
                   <FormSection title="Location Details" description="Where is the distribution happening?">
+                    <FormField label="State" required>
+                      <Combobox
+                        items={states}
+                        value={formData.state}
+                        onChange={(value) => setFormData({ ...formData, state: value })}
+                        placeholder="Select State"
+                      />
+                    </FormField>
+
                     <FormField label="City" required>
-                      <select
+                      <Combobox
+                        items={cities}
+                        value={formData.city}
+                        onChange={(value) => setFormData({ ...formData, city: value })}
+                        placeholder="Select City"
+                        disabled={!formData.state}
+                      />
+                    </FormField>
+
+                    <FormField label="Pin Code" required>
+                      <input
+                        type="text"
                         className="input"
-                        value={formData.cityId}
-                        onChange={(e) => setFormData({ ...formData, cityId: e.target.value })}
+                        value={formData.pinCode}
+                        onChange={(e) => setFormData({ ...formData, pinCode: e.target.value })}
+                        placeholder="Enter pin code"
                         required
-                      >
-                        <option value="">Select City</option>
-                        {cities.map((c) => (
-                          <option key={c._id} value={c._id}>{c.name}</option>
-                        ))}
-                      </select>
+                      />
                     </FormField>
 
                     <FormField label="Area" required>
@@ -242,22 +284,23 @@ export default function DistributionPage() {
                   <FormSection title="Items Distributed" description="What items are being distributed?">
                     {formData.items.map((item, index) => {
                       const availableStock = getAvailableStock(item.itemId);
+                      const itemOptions = items.map(i => `${i.name} (Available: ${getAvailableStock(i._id)})`);
+                      const selectedItemObj = items.find(i => i._id === item.itemId);
+                      const selectedItemDisplay = selectedItemObj ? `${selectedItemObj.name} (Available: ${getAvailableStock(selectedItemObj._id)})` : '';
+                      
                       return (
                       <div key={index} className="md:col-span-2 flex gap-4">
                         <FormField label="Item" required fullWidth>
-                          <select
-                            className="input"
-                            value={item.itemId}
-                            onChange={(e) => updateItem(index, 'itemId', e.target.value)}
-                            required
-                          >
-                            <option value="">Select Item</option>
-                            {items.map((i) => (
-                              <option key={i._id} value={i._id}>
-                                {i.name} (Available: {getAvailableStock(i._id)})
-                              </option>
-                            ))}
-                          </select>
+                          <Combobox
+                            items={itemOptions}
+                            value={selectedItemDisplay}
+                            onChange={(value) => {
+                              const itemName = value.split(' (Available:')[0];
+                              const selectedItem = items.find(i => i.name === itemName);
+                              if (selectedItem) updateItem(index, 'itemId', selectedItem._id);
+                            }}
+                            placeholder="Select Item"
+                          />
                         </FormField>
                         <FormField label="Quantity" required>
                           <input
@@ -318,22 +361,23 @@ export default function DistributionPage() {
                   <FormSection title="Damaged Items" description="Report items that are damaged or unusable">
                     {formData.items.map((item, index) => {
                       const availableStock = getAvailableStock(item.itemId);
+                      const itemOptions = items.map(i => `${i.name} (Available: ${getAvailableStock(i._id)})`);
+                      const selectedItemObj = items.find(i => i._id === item.itemId);
+                      const selectedItemDisplay = selectedItemObj ? `${selectedItemObj.name} (Available: ${getAvailableStock(selectedItemObj._id)})` : '';
+                      
                       return (
                       <div key={index} className="md:col-span-2 flex gap-4">
                         <FormField label="Item" required fullWidth>
-                          <select
-                            className="input"
-                            value={item.itemId}
-                            onChange={(e) => updateItem(index, 'itemId', e.target.value)}
-                            required
-                          >
-                            <option value="">Select Item</option>
-                            {items.map((i) => (
-                              <option key={i._id} value={i._id}>
-                                {i.name} (Available: {getAvailableStock(i._id)})
-                              </option>
-                            ))}
-                          </select>
+                          <Combobox
+                            items={itemOptions}
+                            value={selectedItemDisplay}
+                            onChange={(value) => {
+                              const itemName = value.split(' (Available:')[0];
+                              const selectedItem = items.find(i => i.name === itemName);
+                              if (selectedItem) updateItem(index, 'itemId', selectedItem._id);
+                            }}
+                            placeholder="Select Item"
+                          />
                         </FormField>
                         <FormField label="Quantity" required>
                           <input

@@ -67,17 +67,6 @@ export default function ItemsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Items"
-        description="Manage inventory items and categories"
-        icon={Package}
-        action={
-          <Button icon={Plus} onClick={() => setShowForm(true)}>
-            Add Item
-          </Button>
-        }
-      />
-
       <ContentCard className="p-6">
         <DataTable
           columns={columns}
@@ -85,6 +74,11 @@ export default function ItemsPage() {
           loading={loading}
           searchPlaceholder="Search items..."
           emptyMessage="No items found. Add your first item to get started."
+          action={
+            <Button onClick={() => setShowForm(true)}>
+              Add
+            </Button>
+          }
         />
         <Pagination
           currentPage={pagination.currentPage}

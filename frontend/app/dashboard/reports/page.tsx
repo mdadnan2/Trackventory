@@ -75,17 +75,6 @@ export default function ReportsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Reports"
-        description="Analytics and distribution reports"
-        icon={FileText}
-        action={
-          <Button icon={Download} variant="secondary">
-            Export
-          </Button>
-        }
-      />
-
       <ContentCard>
         <div className="border-b border-slate-200">
           <div className="flex gap-1 p-2 overflow-x-auto">
@@ -205,7 +194,7 @@ export default function ReportsPage() {
                       <div className="flex items-center justify-between">
                         <div>
                           <h3 className="font-semibold text-slate-900">
-                            City ID: {area._id.cityId} - Area: {area._id.area}
+                            {area._id.city} - {area._id.area}
                           </h3>
                           <p className="text-sm text-slate-500 mt-1">
                             Total Distributions: {area.count}

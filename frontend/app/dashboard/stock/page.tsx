@@ -124,17 +124,6 @@ export default function StockPage() {
           animate={{ opacity: 1 }}
           className="space-y-6"
         >
-          <PageHeader
-            title="My Stock"
-            description="View and manage your assigned inventory"
-            icon={Package}
-            action={
-              <Button onClick={() => setShowReturnModal(true)} icon={Undo2}>
-                Return Stock
-              </Button>
-            }
-          />
-
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -380,12 +369,6 @@ export default function StockPage() {
     <>
       <ToastContainer toast={toast} onClose={() => setToast(null)} />
       <div className="space-y-6">
-      <PageHeader
-        title="Stock Management"
-        description="Add stock to central inventory or assign to volunteers"
-        icon={Warehouse}
-      />
-
       <ContentCard>
         <div className="border-b border-slate-200">
           <div className="flex gap-1 p-2">

@@ -37,13 +37,13 @@ export default function DashboardPage() {
       } else if (user?.role === 'VOLUNTEER') {
         const [stockRes, distRes] = await Promise.all([
           stockAPI.getVolunteerStock(user._id),
-          distributionAPI.getAll({ page: 1, limit: 5 })
+          distributionAPI.getAll({ volunteerId: user._id, page: 1, limit: 50 })
         ]);
+        console.log('Distribution API Response:', distRes.data);
         setVolunteerStock(stockRes.data.data);
-        const myDists = distRes.data.data.distributions?.filter(
-          (d: any) => d.volunteerId?._id === user._id
-        ) || [];
-        setMyDistributions(myDists);
+        const distributions = distRes.data.data?.data || [];
+        console.log('Distributions:', distributions);
+        setMyDistributions(distributions);
       }
     } catch (error) {
       console.error('Error loading data:', error);
@@ -136,10 +136,6 @@ export default function DashboardPage() {
       animate={{ opacity: 1 }}
       className="space-y-8"
     >
-      <div>
-        <h1 className="text-3xl font-bold text-slate-900">Dashboard</h1>
-        <p className="text-slate-500 mt-1">Welcome back, {user?.name}</p>
-      </div>
 
       {user?.role === 'ADMIN' && (
         <>

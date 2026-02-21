@@ -7,7 +7,9 @@ export interface IDistributionItem {
 
 export interface IDistribution extends Document {
   volunteerId: mongoose.Types.ObjectId;
-  cityId: mongoose.Types.ObjectId;
+  state: string;
+  city: string;
+  pinCode: string;
   area: string;
   campaignId?: mongoose.Types.ObjectId;
   items: IDistributionItem[];
@@ -17,7 +19,9 @@ export interface IDistribution extends Document {
 
 const distributionSchema = new Schema<IDistribution>({
   volunteerId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-  cityId: { type: Schema.Types.ObjectId, ref: 'City', required: true },
+  state: { type: String, required: true },
+  city: { type: String, required: true },
+  pinCode: { type: String, required: true },
   area: { type: String, required: true },
   campaignId: { type: Schema.Types.ObjectId, ref: 'Campaign' },
   items: [{
@@ -29,8 +33,9 @@ const distributionSchema = new Schema<IDistribution>({
 });
 
 distributionSchema.index({ volunteerId: 1 });
-distributionSchema.index({ cityId: 1 });
-distributionSchema.index({ cityId: 1, area: 1 });
+distributionSchema.index({ state: 1 });
+distributionSchema.index({ city: 1 });
+distributionSchema.index({ city: 1, area: 1 });
 distributionSchema.index({ campaignId: 1 });
 distributionSchema.index({ createdAt: -1 });
 

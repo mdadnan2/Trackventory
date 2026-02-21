@@ -27,7 +27,7 @@ export default function DashboardLayout({
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="h-screen flex items-center justify-center bg-slate-50">
         <div className="text-xl text-slate-600">Loading...</div>
       </div>
     );
@@ -40,14 +40,16 @@ export default function DashboardLayout({
   // ADMIN: Always desktop
   if (user.role === 'ADMIN') {
     return (
-      <div className="min-h-screen bg-slate-50">
-        <div className="hidden lg:block">
+      <div className="h-screen overflow-hidden flex bg-slate-50">
+        {/* Sidebar: fixed height, no independent scroll unless menu is long */}
+        <div className="hidden lg:block h-screen shrink-0">
           <Sidebar user={user} />
         </div>
         <MobileSidebar user={user} />
-        <div className="lg:ml-64">
-          <Header user={user} onSignOut={signOut} />
-          <main className="mt-16 p-4 lg:p-8">
+        {/* Main area: flex column, header fixed, content scrollable */}
+        <div className="flex-1 flex flex-col overflow-hidden lg:ml-64">
+          <Header user={user} onSignOut={signOut} className="shrink-0 h-16" />
+          <main className="flex-1 overflow-y-auto p-4 lg:p-8">
             {children}
           </main>
         </div>
@@ -62,14 +64,14 @@ export default function DashboardLayout({
 
   // VOLUNTEER: Desktop with toggle option
   return (
-    <div className="min-h-screen bg-slate-50">
-      <div className="hidden lg:block">
+    <div className="h-screen overflow-hidden flex bg-slate-50">
+      <div className="hidden lg:block h-screen shrink-0">
         <Sidebar user={user} />
       </div>
       <MobileSidebar user={user} />
-      <div className="lg:ml-64">
-        <Header user={user} onSignOut={signOut} />
-        <main className="mt-16 p-4 lg:p-8">
+      <div className="flex-1 flex flex-col overflow-hidden lg:ml-64">
+        <Header user={user} onSignOut={signOut} className="shrink-0 h-16" />
+        <main className="flex-1 overflow-y-auto p-4 lg:p-8">
           {children}
         </main>
       </div>

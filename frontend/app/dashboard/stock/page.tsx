@@ -6,7 +6,7 @@ import MobileStock from '@/components/mobile-volunteer/mobile-pages/stock';
 import { useEffect, useState } from 'react';
 import { stockAPI, itemsAPI, usersAPI } from '@/services/api';
 import { Item, User, StockItem } from '@/types';
-import { Warehouse, Package, TrendingUp, AlertCircle, Plus, Minus } from 'lucide-react';
+import { Warehouse, Package, TrendingUp, AlertCircle, Plus, Minus, Undo2 } from 'lucide-react';
 import PageHeader from '@/components/ui/page-header';
 import ContentCard from '@/components/ui/content-card';
 import FormSection from '@/components/ui/form-section';
@@ -25,6 +25,9 @@ export default function StockPage() {
   const [stockItems, setStockItems] = useState<Array<{ itemId: string; quantity: number }>>([{ itemId: '', quantity: 0 }]);
   const [selectedVolunteer, setSelectedVolunteer] = useState('');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null);
+  const [showReturnModal, setShowReturnModal] = useState(false);
+  const [returnItems, setReturnItems] = useState<Array<{ itemId: string; quantity: number }>>([{ itemId: '', quantity: 0 }]);
+  const [returnNotes, setReturnNotes] = useState('');
 
   useEffect(() => {
     loadData();
@@ -94,6 +97,20 @@ export default function StockPage() {
     }
   };
 
+  const handleReturnStock = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await stockAPI.returnStock({ volunteerId: user?._id, items: returnItems, notes: returnNotes });
+      setToast({ message: 'Stock returned successfully!', type: 'success' });
+      setShowReturnModal(false);
+      setReturnItems([{ itemId: '', quantity: 0 }]);
+      setReturnNotes('');
+      loadData();
+    } catch (error: any) {
+      setToast({ message: error.response?.data?.error || 'Error returning stock', type: 'error' });
+    }
+  };
+
   if (user?.role === 'VOLUNTEER') {
     if (isMobile) {
       return <MobileStock />;
@@ -111,6 +128,11 @@ export default function StockPage() {
             title="My Stock"
             description="View and manage your assigned inventory"
             icon={Package}
+            action={
+              <Button onClick={() => setShowReturnModal(true)} icon={Undo2}>
+                Return Stock
+              </Button>
+            }
           />
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -236,6 +258,120 @@ export default function StockPage() {
             </ContentCard>
           </motion.div>
         </motion.div>
+
+        {showReturnModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+            >
+              <div className="p-6 border-b border-slate-200">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
+                      <Undo2 className="text-blue-600" size={20} />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-bold text-slate-900">Return Stock</h2>
+                      <p className="text-sm text-slate-500">Return items to central warehouse</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowReturnModal(false)}
+                    className="text-slate-400 hover:text-slate-600 transition-colors"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+
+              <form onSubmit={handleReturnStock} className="p-6 space-y-6">
+                {returnItems.map((item, index) => (
+                  <div key={index} className="flex gap-4">
+                    <FormField label="Item" required fullWidth>
+                      <select
+                        className="input"
+                        value={item.itemId}
+                        onChange={(e) => {
+                          const updated = [...returnItems];
+                          updated[index].itemId = e.target.value;
+                          setReturnItems(updated);
+                        }}
+                        required
+                      >
+                        <option value="">Select Item</option>
+                        {myStock.map((s) => (
+                          <option key={s.itemId} value={s.itemId}>
+                            {s.item.name} (Available: {s.stock} {s.item.unit})
+                          </option>
+                        ))}
+                      </select>
+                    </FormField>
+                    <FormField label="Quantity" required>
+                      <input
+                        type="number"
+                        className="input"
+                        value={item.quantity}
+                        onChange={(e) => {
+                          const updated = [...returnItems];
+                          updated[index].quantity = parseInt(e.target.value);
+                          setReturnItems(updated);
+                        }}
+                        min="1"
+                        required
+                      />
+                    </FormField>
+                    {returnItems.length > 1 && (
+                      <div className="flex items-end">
+                        <Button
+                          type="button"
+                          variant="danger"
+                          icon={Minus}
+                          onClick={() => setReturnItems(returnItems.filter((_, i) => i !== index))}
+                        />
+                      </div>
+                    )}
+                  </div>
+                ))}
+
+                <Button
+                  type="button"
+                  variant="secondary"
+                  icon={Plus}
+                  onClick={() => setReturnItems([...returnItems, { itemId: '', quantity: 0 }])}
+                  fullWidth
+                >
+                  Add Another Item
+                </Button>
+
+                <FormField label="Notes (Optional)" fullWidth>
+                  <textarea
+                    className="input"
+                    rows={3}
+                    value={returnNotes}
+                    onChange={(e) => setReturnNotes(e.target.value)}
+                    placeholder="Reason for return..."
+                  />
+                </FormField>
+
+                <div className="flex gap-3 pt-4">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => setShowReturnModal(false)}
+                    fullWidth
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit" fullWidth>
+                    Return Stock
+                  </Button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
       </>
     );
   }

@@ -34,7 +34,7 @@ export default function Header({ user, onSignOut }: HeaderProps) {
 
   return (
     <>
-      <header className="fixed top-0 left-0 lg:left-64 right-0 h-16 bg-white border-b border-slate-200 z-10">
+      <header className="flex-shrink-0 h-16 bg-white border-b border-slate-200 z-10">
         <div className="h-full px-4 lg:pl-8 lg:pr-4 flex items-center justify-end">
           <div className="flex items-center">
             <div className="relative">

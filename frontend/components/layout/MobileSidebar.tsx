@@ -45,9 +45,11 @@ export default function MobileSidebar({ user }: MobileSidebarProps) {
     <>
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed top-4 left-4 z-50 lg:hidden p-2 bg-white rounded-xl shadow-lg border border-slate-200"
+        className="fixed top-4 left-4 z-50 lg:hidden p-2 hover:bg-slate-100 rounded-lg transition-colors"
       >
-        <Menu size={24} className="text-slate-900" />
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M3 6h18M3 12h18M3 18h18" stroke="#334155" strokeWidth="2" strokeLinecap="round"/>
+        </svg>
       </button>
 
       <AnimatePresence>

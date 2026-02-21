@@ -8,9 +8,7 @@ import { withTransaction } from '../../utils/transaction';
 
 export class StockService {
   async getCentralStock(itemId?: string) {
-    const match: any = {
-      type: { $in: [TransactionType.STOCK_IN, TransactionType.ISSUE_TO_VOLUNTEER] }
-    };
+    const match: any = {};
     
     if (itemId) {
       match.itemId = new mongoose.Types.ObjectId(itemId);
@@ -21,14 +19,40 @@ export class StockService {
       {
         $group: {
           _id: '$itemId',
-          totalIn: {
+          totalStockIn: {
             $sum: {
-              $cond: [{ $eq: ['$direction', TransactionDirection.IN] }, '$quantity', 0]
+              $cond: [
+                { $and: [
+                  { $eq: ['$type', TransactionType.STOCK_IN] },
+                  { $eq: ['$direction', TransactionDirection.IN] }
+                ]},
+                '$quantity',
+                0
+              ]
             }
           },
-          totalOut: {
+          totalIssued: {
             $sum: {
-              $cond: [{ $eq: ['$direction', TransactionDirection.OUT] }, '$quantity', 0]
+              $cond: [
+                { $and: [
+                  { $eq: ['$type', TransactionType.ISSUE_TO_VOLUNTEER] },
+                  { $eq: ['$direction', TransactionDirection.OUT] }
+                ]},
+                '$quantity',
+                0
+              ]
+            }
+          },
+          totalReturned: {
+            $sum: {
+              $cond: [
+                { $and: [
+                  { $eq: ['$type', TransactionType.RETURN_TO_CENTRAL] },
+                  { $eq: ['$direction', TransactionDirection.IN] }
+                ]},
+                '$quantity',
+                0
+              ]
             }
           }
         }
@@ -36,7 +60,7 @@ export class StockService {
       {
         $project: {
           itemId: '$_id',
-          stock: { $subtract: ['$totalIn', '$totalOut'] }
+          stock: { $subtract: [{ $add: ['$totalStockIn', '$totalReturned'] }, '$totalIssued'] }
         }
       }
     ]);
@@ -51,10 +75,7 @@ export class StockService {
   }
 
   async getVolunteerStock(volunteerId: string, itemId?: string) {
-    const match: any = {
-      performedBy: new mongoose.Types.ObjectId(volunteerId),
-      type: { $in: [TransactionType.ISSUE_TO_VOLUNTEER, TransactionType.DISTRIBUTION, TransactionType.DAMAGE] }
-    };
+    const match: any = {};
     
     if (itemId) {
       match.itemId = new mongoose.Types.ObjectId(itemId);
@@ -65,14 +86,56 @@ export class StockService {
       {
         $group: {
           _id: '$itemId',
-          totalIn: {
+          totalReceived: {
             $sum: {
-              $cond: [{ $eq: ['$direction', TransactionDirection.IN] }, '$quantity', 0]
+              $cond: [
+                { $and: [
+                  { $eq: ['$type', TransactionType.ISSUE_TO_VOLUNTEER] },
+                  { $eq: ['$direction', TransactionDirection.IN] },
+                  { $eq: ['$performedBy', new mongoose.Types.ObjectId(volunteerId)] }
+                ]},
+                '$quantity',
+                0
+              ]
             }
           },
-          totalOut: {
+          totalDistributed: {
             $sum: {
-              $cond: [{ $eq: ['$direction', TransactionDirection.OUT] }, '$quantity', 0]
+              $cond: [
+                { $and: [
+                  { $eq: ['$type', TransactionType.DISTRIBUTION] },
+                  { $eq: ['$direction', TransactionDirection.OUT] },
+                  { $eq: ['$performedBy', new mongoose.Types.ObjectId(volunteerId)] }
+                ]},
+                '$quantity',
+                0
+              ]
+            }
+          },
+          totalDamaged: {
+            $sum: {
+              $cond: [
+                { $and: [
+                  { $eq: ['$type', TransactionType.DAMAGE] },
+                  { $eq: ['$direction', TransactionDirection.OUT] },
+                  { $eq: ['$performedBy', new mongoose.Types.ObjectId(volunteerId)] }
+                ]},
+                '$quantity',
+                0
+              ]
+            }
+          },
+          totalReturned: {
+            $sum: {
+              $cond: [
+                { $and: [
+                  { $eq: ['$type', TransactionType.RETURN_TO_CENTRAL] },
+                  { $eq: ['$direction', TransactionDirection.OUT] },
+                  { $eq: ['$performedBy', new mongoose.Types.ObjectId(volunteerId)] }
+                ]},
+                '$quantity',
+                0
+              ]
             }
           }
         }
@@ -80,7 +143,12 @@ export class StockService {
       {
         $project: {
           itemId: '$_id',
-          stock: { $subtract: ['$totalIn', '$totalOut'] }
+          stock: { $subtract: ['$totalReceived', { $add: ['$totalDistributed', '$totalDamaged', '$totalReturned'] }] }
+        }
+      },
+      {
+        $match: {
+          stock: { $gt: 0 }
         }
       }
     ]);
@@ -192,6 +260,64 @@ export class StockService {
       }
 
       return { success: true, message: 'Stock assigned to volunteer', assignmentId: assignment[0]._id };
+    });
+  }
+
+  async returnStock(volunteerId: string, items: Array<{ itemId: string; quantity: number }>, performedBy: string, notes?: string) {
+    return withTransaction(async (session) => {
+      const volunteerQuery = User.findOne({ _id: volunteerId, role: UserRole.VOLUNTEER, status: 'ACTIVE' });
+      const volunteer = session ? await volunteerQuery.session(session) : await volunteerQuery;
+      if (!volunteer) {
+        throw new NotFoundError('Volunteer not found or inactive');
+      }
+
+      const itemIds = items.map(i => new mongoose.Types.ObjectId(i.itemId));
+      const itemQuery = Item.find({ _id: { $in: itemIds }, isActive: true });
+      const foundItems = session ? await itemQuery.session(session) : await itemQuery;
+      
+      if (foundItems.length !== itemIds.length) {
+        throw new BadRequestError('Some items not found or inactive');
+      }
+
+      const volunteerStock = await this.getVolunteerStock(volunteerId);
+      const stockMap = new Map(volunteerStock.map(s => [s.itemId.toString(), s.stock]));
+
+      for (const item of items) {
+        const available = stockMap.get(item.itemId) || 0;
+        if (available < item.quantity) {
+          throw new BadRequestError(`Insufficient volunteer stock for item ${item.itemId}`);
+        }
+      }
+
+      const transactions = [];
+      
+      for (const item of items) {
+        // OUT from volunteer
+        transactions.push({
+          itemId: new mongoose.Types.ObjectId(item.itemId),
+          type: TransactionType.RETURN_TO_CENTRAL,
+          direction: TransactionDirection.OUT,
+          quantity: item.quantity,
+          performedBy: new mongoose.Types.ObjectId(volunteerId)
+        });
+        
+        // IN to central warehouse
+        transactions.push({
+          itemId: new mongoose.Types.ObjectId(item.itemId),
+          type: TransactionType.RETURN_TO_CENTRAL,
+          direction: TransactionDirection.IN,
+          quantity: item.quantity,
+          performedBy: new mongoose.Types.ObjectId(performedBy)
+        });
+      }
+
+      if (session) {
+        await InventoryTransaction.insertMany(transactions, { session });
+      } else {
+        await InventoryTransaction.insertMany(transactions);
+      }
+
+      return { success: true, message: 'Stock returned to central warehouse' };
     });
   }
 }

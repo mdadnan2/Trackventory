@@ -14,6 +14,17 @@ api.interceptors.request.use(async (config) => {
   return config;
 });
 
+api.interceptors.response.use(
+  (response) => {
+    console.log('API Response:', response.config.url, response.data);
+    return response;
+  },
+  (error) => {
+    console.error('API Error:', error.config?.url, error.response?.data);
+    return Promise.reject(error);
+  }
+);
+
 export const authAPI = {
   login: (idToken: string) => api.post('/auth/login', { idToken })
 };
@@ -53,11 +64,26 @@ export const campaignsAPI = {
 };
 
 export const stockAPI = {
-  getCentralStock: (itemId?: string) => api.get(`/stock/central${itemId ? `?itemId=${itemId}` : ''}`),
-  getVolunteerStock: (volunteerId: string, itemId?: string) => 
-    api.get(`/stock/volunteer/${volunteerId}${itemId ? `?itemId=${itemId}` : ''}`),
-  addStock: (data: any) => api.post('/stock/add', data),
-  assignStock: (data: any) => api.post('/stock/assign', data)
+  getCentralStock: (itemId?: string) => {
+    console.log('Calling getCentralStock:', { itemId });
+    return api.get(`/stock/central${itemId ? `?itemId=${itemId}` : ''}`);
+  },
+  getVolunteerStock: (volunteerId: string, itemId?: string) => {
+    console.log('Calling getVolunteerStock:', { volunteerId, itemId });
+    return api.get(`/stock/volunteer/${volunteerId}${itemId ? `?itemId=${itemId}` : ''}`);
+  },
+  addStock: (data: any) => {
+    console.log('Calling addStock:', data);
+    return api.post('/stock/add', data);
+  },
+  assignStock: (data: any) => {
+    console.log('Calling assignStock:', data);
+    return api.post('/stock/assign', data);
+  },
+  returnStock: (data: any) => {
+    console.log('Calling returnStock:', data);
+    return api.post('/stock/return', data);
+  }
 };
 
 export const distributionAPI = {

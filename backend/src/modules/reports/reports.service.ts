@@ -10,21 +10,45 @@ export class ReportsService {
     const { page: p, limit: l } = getPaginationParams(page, limit);
     const centralStock = await InventoryTransaction.aggregate([
       {
-        $match: {
-          type: { $in: [TransactionType.STOCK_IN, TransactionType.ISSUE_TO_VOLUNTEER] }
-        }
+        $match: {}
       },
       {
         $group: {
           _id: '$itemId',
-          totalIn: {
+          totalStockIn: {
             $sum: {
-              $cond: [{ $eq: ['$direction', TransactionDirection.IN] }, '$quantity', 0]
+              $cond: [
+                { $and: [
+                  { $eq: ['$type', TransactionType.STOCK_IN] },
+                  { $eq: ['$direction', TransactionDirection.IN] }
+                ]},
+                '$quantity',
+                0
+              ]
             }
           },
-          totalOut: {
+          totalIssued: {
             $sum: {
-              $cond: [{ $eq: ['$direction', TransactionDirection.OUT] }, '$quantity', 0]
+              $cond: [
+                { $and: [
+                  { $eq: ['$type', TransactionType.ISSUE_TO_VOLUNTEER] },
+                  { $eq: ['$direction', TransactionDirection.OUT] }
+                ]},
+                '$quantity',
+                0
+              ]
+            }
+          },
+          totalReturned: {
+            $sum: {
+              $cond: [
+                { $and: [
+                  { $eq: ['$type', TransactionType.RETURN_TO_CENTRAL] },
+                  { $eq: ['$direction', TransactionDirection.IN] }
+                ]},
+                '$quantity',
+                0
+              ]
             }
           }
         }
@@ -32,28 +56,64 @@ export class ReportsService {
       {
         $project: {
           itemId: '$_id',
-          centralStock: { $subtract: ['$totalIn', '$totalOut'] }
+          centralStock: { $subtract: [{ $add: ['$totalStockIn', '$totalReturned'] }, '$totalIssued'] }
         }
       }
     ]);
 
     const volunteerStock = await InventoryTransaction.aggregate([
       {
-        $match: {
-          type: { $in: [TransactionType.ISSUE_TO_VOLUNTEER, TransactionType.DISTRIBUTION, TransactionType.DAMAGE] }
-        }
+        $match: {}
       },
       {
         $group: {
           _id: '$itemId',
-          totalIn: {
+          totalReceived: {
             $sum: {
-              $cond: [{ $eq: ['$direction', TransactionDirection.IN] }, '$quantity', 0]
+              $cond: [
+                { $and: [
+                  { $eq: ['$type', TransactionType.ISSUE_TO_VOLUNTEER] },
+                  { $eq: ['$direction', TransactionDirection.IN] }
+                ]},
+                '$quantity',
+                0
+              ]
             }
           },
-          totalOut: {
+          totalDistributed: {
             $sum: {
-              $cond: [{ $eq: ['$direction', TransactionDirection.OUT] }, '$quantity', 0]
+              $cond: [
+                { $and: [
+                  { $eq: ['$type', TransactionType.DISTRIBUTION] },
+                  { $eq: ['$direction', TransactionDirection.OUT] }
+                ]},
+                '$quantity',
+                0
+              ]
+            }
+          },
+          totalDamaged: {
+            $sum: {
+              $cond: [
+                { $and: [
+                  { $eq: ['$type', TransactionType.DAMAGE] },
+                  { $eq: ['$direction', TransactionDirection.OUT] }
+                ]},
+                '$quantity',
+                0
+              ]
+            }
+          },
+          totalReturned: {
+            $sum: {
+              $cond: [
+                { $and: [
+                  { $eq: ['$type', TransactionType.RETURN_TO_CENTRAL] },
+                  { $eq: ['$direction', TransactionDirection.OUT] }
+                ]},
+                '$quantity',
+                0
+              ]
             }
           }
         }
@@ -61,7 +121,7 @@ export class ReportsService {
       {
         $project: {
           itemId: '$_id',
-          volunteerStock: { $max: [{ $subtract: ['$totalIn', '$totalOut'] }, 0] }
+          volunteerStock: { $max: [{ $subtract: ['$totalReceived', { $add: ['$totalDistributed', '$totalDamaged', '$totalReturned'] }] }, 0] }
         }
       }
     ]);
@@ -128,21 +188,57 @@ export class ReportsService {
     const { page: p, limit: l } = getPaginationParams(page, limit);
     const result = await InventoryTransaction.aggregate([
       {
-        $match: {
-          type: { $in: [TransactionType.ISSUE_TO_VOLUNTEER, TransactionType.DISTRIBUTION, TransactionType.DAMAGE] }
-        }
+        $match: {}
       },
       {
         $group: {
           _id: { volunteerId: '$performedBy', itemId: '$itemId' },
-          totalIn: {
+          totalReceived: {
             $sum: {
-              $cond: [{ $eq: ['$direction', TransactionDirection.IN] }, '$quantity', 0]
+              $cond: [
+                { $and: [
+                  { $eq: ['$type', TransactionType.ISSUE_TO_VOLUNTEER] },
+                  { $eq: ['$direction', TransactionDirection.IN] }
+                ]},
+                '$quantity',
+                0
+              ]
             }
           },
-          totalOut: {
+          totalDistributed: {
             $sum: {
-              $cond: [{ $eq: ['$direction', TransactionDirection.OUT] }, '$quantity', 0]
+              $cond: [
+                { $and: [
+                  { $eq: ['$type', TransactionType.DISTRIBUTION] },
+                  { $eq: ['$direction', TransactionDirection.OUT] }
+                ]},
+                '$quantity',
+                0
+              ]
+            }
+          },
+          totalDamaged: {
+            $sum: {
+              $cond: [
+                { $and: [
+                  { $eq: ['$type', TransactionType.DAMAGE] },
+                  { $eq: ['$direction', TransactionDirection.OUT] }
+                ]},
+                '$quantity',
+                0
+              ]
+            }
+          },
+          totalReturned: {
+            $sum: {
+              $cond: [
+                { $and: [
+                  { $eq: ['$type', TransactionType.RETURN_TO_CENTRAL] },
+                  { $eq: ['$direction', TransactionDirection.OUT] }
+                ]},
+                '$quantity',
+                0
+              ]
             }
           }
         }
@@ -151,7 +247,7 @@ export class ReportsService {
         $project: {
           volunteerId: '$_id.volunteerId',
           itemId: '$_id.itemId',
-          stock: { $subtract: ['$totalIn', '$totalOut'] }
+          stock: { $subtract: ['$totalReceived', { $add: ['$totalDistributed', '$totalDamaged', '$totalReturned'] }] }
         }
       },
       {

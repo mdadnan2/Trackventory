@@ -3,8 +3,12 @@
 @tailwind utilities;
 
 @layer base {
+  html {
+    @apply h-screen overflow-hidden;
+  }
+
   body {
-    @apply bg-slate-50 text-slate-900 antialiased;
+    @apply h-screen overflow-hidden bg-slate-50 text-slate-900 antialiased;
   }
 }
 
@@ -12,7 +16,7 @@
   .safe-area-pb {
     padding-bottom: env(safe-area-inset-bottom);
   }
-  
+
   .active\:scale-98:active {
     transform: scale(0.98);
   }

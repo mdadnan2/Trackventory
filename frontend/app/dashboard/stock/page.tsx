@@ -4,9 +4,9 @@ import { useAuth } from '@/hooks/useAuth';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import MobileStock from '@/components/mobile-volunteer/mobile-pages/stock';
 import { useEffect, useState } from 'react';
-import { stockAPI, itemsAPI, usersAPI } from '@/services/api';
+import { stockAPI, itemsAPI, usersAPI, reportsAPI } from '@/services/api';
 import { Item, User, StockItem } from '@/types';
-import { Warehouse, Package, TrendingUp, AlertCircle, Plus, Minus, Undo2 } from 'lucide-react';
+import { Warehouse, Package, TrendingUp, AlertCircle, Plus, Minus, Undo2, Info } from 'lucide-react';
 import PageHeader from '@/components/ui/page-header';
 import ContentCard from '@/components/ui/content-card';
 import FormSection from '@/components/ui/form-section';
@@ -14,6 +14,8 @@ import FormField from '@/components/ui/form-field';
 import Button from '@/components/ui/button';
 import { ToastContainer } from '@/components/ui/toast';
 import { motion } from 'framer-motion';
+import DataTable from '@/components/ui/data-table';
+import { Pagination } from '@/components/ui/pagination';
 
 export default function StockPage() {
   const { user } = useAuth();
@@ -28,10 +30,57 @@ export default function StockPage() {
   const [showReturnModal, setShowReturnModal] = useState(false);
   const [returnItems, setReturnItems] = useState<Array<{ itemId: string; quantity: number }>>([{ itemId: '', quantity: 0 }]);
   const [returnNotes, setReturnNotes] = useState('');
+  const [stockSummary, setStockSummary] = useState<any[]>([]);
+  const [pagination, setPagination] = useState({ currentPage: 1, totalPages: 1, totalRecords: 0, pageSize: 5 });
+  const [loading, setLoading] = useState(false);
+  const [showVolunteerModal, setShowVolunteerModal] = useState(false);
+  const [selectedItemDetails, setSelectedItemDetails] = useState<any>(null);
 
   useEffect(() => {
     loadData();
+    if (user?.role === 'ADMIN') {
+      loadStockSummary(1);
+    }
   }, []);
+
+  const loadStockSummary = async (page: number) => {
+    setLoading(true);
+    try {
+      const stockRes = await reportsAPI.getStockSummary(page);
+      const result = stockRes.data.data;
+      setStockSummary(result.data);
+      setPagination(result.pagination);
+    } catch (error) {
+      console.error('Error loading stock summary:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadVolunteerStockDetails = async (itemId: string, itemName: string) => {
+    try {
+      const volunteerRes = await reportsAPI.getVolunteerStock(1, 100);
+      const allVolunteers = volunteerRes.data.data.data;
+      const volunteerDetails = [];
+      
+      for (const v of allVolunteers) {
+        const itemStock = v.items.find((i: any) => i.item.id === itemId);
+        if (itemStock && itemStock.stock > 0) {
+          volunteerDetails.push({
+            volunteer: v.volunteer.name,
+            item: itemStock.item.name,
+            quantity: itemStock.stock,
+            unit: itemStock.item.unit
+          });
+        }
+      }
+      
+      setSelectedItemDetails(volunteerDetails);
+      setShowVolunteerModal(true);
+    } catch (error) {
+      console.error('Error loading volunteer details:', error);
+    }
+  };
 
   const loadData = async () => {
     try {
@@ -519,7 +568,117 @@ export default function StockPage() {
           )}
         </div>
       </ContentCard>
+
+      <ContentCard>
+        <div className="p-6">
+          <h2 className="text-xl font-semibold text-slate-900 mb-6">Stock Summary</h2>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-slate-50 border-b border-slate-200">
+                <tr>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">Item</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">Category</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">Central Stock</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">With Volunteers</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">Total Stock</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200">
+                {loading ? (
+                  <tr><td colSpan={6} className="px-4 py-8 text-center text-slate-500">Loading...</td></tr>
+                ) : stockSummary.length === 0 ? (
+                  <tr><td colSpan={6} className="px-4 py-8 text-center text-slate-500">No stock data available</td></tr>
+                ) : (
+                  stockSummary.map((row: any, idx: number) => (
+                    <tr key={idx} className="hover:bg-slate-50">
+                      <td className="px-4 py-3 text-sm text-slate-900">{row.item.name}</td>
+                      <td className="px-4 py-3 text-sm text-slate-600">{row.item.category}</td>
+                      <td className="px-4 py-3 text-sm text-slate-900">{row.centralStock}</td>
+                      <td className="px-4 py-3 text-sm text-slate-900">{row.volunteerStock}</td>
+                      <td className="px-4 py-3 text-sm font-semibold text-slate-900">{row.centralStock + row.volunteerStock}</td>
+                      <td className="px-4 py-3">
+                        <button
+                          onClick={() => loadVolunteerStockDetails(row.item.id || row.item._id, row.item.name)}
+                          className="p-2 hover:bg-blue-50 rounded-lg transition-colors"
+                          title="View volunteer details"
+                        >
+                          <Info className="text-blue-600" size={18} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+          <Pagination
+            currentPage={pagination.currentPage}
+            totalPages={pagination.totalPages}
+            onPageChange={loadStockSummary}
+          />
+        </div>
+      </ContentCard>
     </div>
+
+    {showVolunteerModal && (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+        >
+          <div className="p-6 border-b border-slate-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
+                  <Info className="text-blue-600" size={20} />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-slate-900">Volunteer Stock Details</h2>
+                  <p className="text-sm text-slate-500">Item distribution across volunteers</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowVolunteerModal(false)}
+                className="text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+
+          <div className="p-6">
+            {selectedItemDetails && selectedItemDetails.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-slate-50 border-b border-slate-200">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">Volunteer</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">Item</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">Quantity</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">Unit</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200">
+                    {selectedItemDetails.map((detail: any, idx: number) => (
+                      <tr key={idx} className="hover:bg-slate-50">
+                        <td className="px-4 py-3 text-sm text-slate-900">{detail.volunteer}</td>
+                        <td className="px-4 py-3 text-sm text-slate-600">{detail.item}</td>
+                        <td className="px-4 py-3 text-sm font-semibold text-slate-900">{detail.quantity}</td>
+                        <td className="px-4 py-3 text-sm text-slate-600">{detail.unit}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="text-center py-8 text-slate-500">No volunteers have this item</div>
+            )}
+          </div>
+        </motion.div>
+      </div>
+    )}
     </>
   );
 }

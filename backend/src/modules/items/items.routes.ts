@@ -15,5 +15,6 @@ router.post('/', roleGuard(UserRole.ADMIN), itemsController.createItem.bind(item
 router.get('/', itemsController.getItems.bind(itemsController));
 router.get('/:id', itemsController.getItemById.bind(itemsController));
 router.patch('/:id', roleGuard(UserRole.ADMIN), itemsController.updateItem.bind(itemsController));
+router.patch('/:id/toggle-status', roleGuard(UserRole.ADMIN), itemsController.toggleStatus.bind(itemsController));
 
 export default router;

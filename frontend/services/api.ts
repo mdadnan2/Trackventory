@@ -40,7 +40,8 @@ export const itemsAPI = {
   create: (data: any) => api.post('/items', data),
   getAll: (page?: number, limit?: number) => api.get('/items', { params: { page, limit } }),
   getById: (id: string) => api.get(`/items/${id}`),
-  update: (id: string, data: any) => api.patch(`/items/${id}`, data)
+  update: (id: string, data: any) => api.patch(`/items/${id}`, data),
+  toggleStatus: (id: string, isActive: boolean) => api.patch(`/items/${id}/toggle-status`, { isActive })
 };
 
 export const packagesAPI = {

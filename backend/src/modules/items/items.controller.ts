@@ -46,4 +46,14 @@ export class ItemsController {
       next(error);
     }
   }
+
+  async toggleStatus(req: UserRequest, res: Response, next: NextFunction) {
+    try {
+      const { isActive } = req.body;
+      const item = await itemsService.toggleItemStatus(req.params.id, isActive);
+      sendSuccess(res, item);
+    } catch (error) {
+      next(error);
+    }
+  }
 }

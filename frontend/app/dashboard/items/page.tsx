@@ -12,13 +12,17 @@ import FormField from '@/components/ui/form-field';
 import Button from '@/components/ui/button';
 import Badge from '@/components/ui/badge';
 import { Pagination } from '@/components/ui/pagination';
+import { ToastContainer } from '@/components/ui/toast';
 
 export default function ItemsPage() {
   const [items, setItems] = useState<Item[]>([]);
   const [pagination, setPagination] = useState({ currentPage: 1, totalPages: 1, totalRecords: 0, pageSize: 5 });
   const [showForm, setShowForm] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({ name: '', category: '', unit: '' });
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null);
 
   useEffect(() => {
     loadItems(pagination.currentPage);
@@ -45,22 +49,84 @@ export default function ItemsPage() {
       setFormData({ name: '', category: '', unit: '' });
       setShowForm(false);
       loadItems(pagination.currentPage);
+      setToast({ message: 'Item created successfully', type: 'success' });
     } catch (error: any) {
-      alert(error.response?.data?.error || 'Error creating item');
+      setToast({ message: error.response?.data?.error || 'Error creating item', type: 'error' });
+    }
+  };
+
+  const handleToggleStatus = async (item: Item) => {
+    setSelectedItem(item);
+    if (!item.isActive) {
+      try {
+        await itemsAPI.toggleStatus(item._id, true);
+        // Update local state immediately
+        setItems(items.map(i => 
+          i._id === item._id ? { ...i, isActive: true } : i
+        ));
+        setToast({ message: 'Item activated successfully', type: 'success' });
+      } catch (error: any) {
+        setToast({ message: error.response?.data?.error || 'Error activating item', type: 'error' });
+      }
+    } else {
+      setShowConfirm(true);
+    }
+  };
+
+  const confirmDeactivate = async () => {
+    if (!selectedItem) return;
+    try {
+      await itemsAPI.toggleStatus(selectedItem._id, false);
+      // Update local state immediately
+      setItems(items.map(item => 
+        item._id === selectedItem._id ? { ...item, isActive: false } : item
+      ));
+      setShowConfirm(false);
+      setSelectedItem(null);
+      setToast({ message: 'Item deactivated successfully', type: 'success' });
+    } catch (error: any) {
+      setToast({ message: error.response?.data?.error || 'Error deactivating item', type: 'error' });
     }
   };
 
   const columns = [
-    { key: 'name', label: 'Name' },
-    { key: 'category', label: 'Category' },
-    { key: 'unit', label: 'Unit' },
+    { 
+      key: 'name', 
+      label: 'Name',
+      render: (value: string, item: Item) => (
+        <span className={item.isActive ? '' : 'text-gray-400'}>{value}</span>
+      )
+    },
+    { 
+      key: 'category', 
+      label: 'Category',
+      render: (value: string, item: Item) => (
+        <span className={item.isActive ? '' : 'text-gray-400'}>{value}</span>
+      )
+    },
+    { 
+      key: 'unit', 
+      label: 'Unit',
+      render: (value: string, item: Item) => (
+        <span className={item.isActive ? '' : 'text-gray-400'}>{value}</span>
+      )
+    },
     {
       key: 'isActive',
       label: 'Status',
-      render: (value: boolean) => (
-        <Badge variant={value ? 'success' : 'danger'}>
-          {value ? 'Active' : 'Inactive'}
-        </Badge>
+      render: (value: boolean, item: Item) => (
+        <label className="inline-flex items-center cursor-pointer">
+          <input
+            type="checkbox"
+            checked={value}
+            onChange={() => handleToggleStatus(item)}
+            className="sr-only peer"
+          />
+          <div className="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+          <span className="ms-3 text-sm font-medium text-gray-900">
+            {value ? 'Active' : 'Inactive'}
+          </span>
+        </label>
       )
     }
   ];
@@ -135,6 +201,38 @@ export default function ItemsPage() {
           </div>
         </form>
       </Modal>
+
+      <Modal
+        isOpen={showConfirm}
+        onClose={() => {
+          setShowConfirm(false);
+          setSelectedItem(null);
+        }}
+        title="Confirm Deactivation"
+        description="Are you sure you want to deactivate this item?"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600">
+            This will deactivate <strong>{selectedItem?.name}</strong>. The item will no longer be available for new transactions.
+          </p>
+          <div className="flex justify-end gap-3 pt-4">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setShowConfirm(false);
+                setSelectedItem(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button variant="danger" onClick={confirmDeactivate}>
+              Deactivate
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      <ToastContainer toast={toast} onClose={() => setToast(null)} />
     </div>
   );
 }

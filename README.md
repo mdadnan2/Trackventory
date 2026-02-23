@@ -37,9 +37,12 @@ Whether you're managing disaster relief supplies, food distribution programs, or
 ### 🔄 Stock Lifecycle Management
 ```
 Central Warehouse → Volunteer Assignment → Field Distribution → Damage Reporting
+                           ↓↑
+                  Volunteer-to-Volunteer Transfer
 ```
 - Track inventory through complete distribution pipeline
 - Assign stock to field volunteers with accountability
+- **Transfer stock between volunteers** for field-level resource rebalancing
 - Record distributions with geographic and demographic data
 - Report and track damaged/expired items
 
@@ -188,13 +191,15 @@ Trackventory follows strict architectural principles to ensure data integrity:
 | `GET` | `/api/items` | List all items | All |
 | `PATCH` | `/api/items/:id` | Update item details | Admin |
 
-### Stock Management (Admin Only)
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/api/stock/central` | Get central warehouse stock |
-| `GET` | `/api/stock/volunteer/:id` | Get volunteer stock |
-| `POST` | `/api/stock/add` | Add stock to central warehouse |
-| `POST` | `/api/stock/assign` | Assign stock to volunteer |
+### Stock Management
+| Method | Endpoint | Description | Access |
+|--------|----------|-------------|--------|
+| `GET` | `/api/stock/central` | Get central warehouse stock | All |
+| `GET` | `/api/stock/volunteer/:id` | Get volunteer stock | All |
+| `POST` | `/api/stock/add` | Add stock to central warehouse | Admin |
+| `POST` | `/api/stock/assign` | Assign stock to volunteer | Admin |
+| `POST` | `/api/stock/return` | Return stock to central warehouse | All |
+| `POST` | `/api/stock/transfer` | Transfer stock between volunteers | All |
 
 ### Distribution Operations
 | Method | Endpoint | Description |
@@ -228,9 +233,11 @@ Trackventory follows strict architectural principles to ensure data integrity:
 
 ### Transaction Types
 - `STOCK_IN`: Items added to central warehouse
-- `ASSIGN_TO_VOLUNTEER`: Stock transferred to field volunteer
+- `ISSUE_TO_VOLUNTEER`: Stock transferred to field volunteer
 - `DISTRIBUTION`: Items distributed to beneficiaries
 - `DAMAGE`: Damaged/expired items reported
+- `RETURN_TO_CENTRAL`: Stock returned from volunteer to warehouse
+- `VOLUNTEER_TRANSFER`: Stock transferred between volunteers
 
 ## 🔒 Security
 

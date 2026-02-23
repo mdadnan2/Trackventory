@@ -23,3 +23,13 @@ export const returnStockSchema = z.object({
   })).min(1),
   notes: z.string().optional()
 });
+
+export const transferStockSchema = z.object({
+  fromVolunteerId: z.string(),
+  toVolunteerId: z.string(),
+  items: z.array(z.object({
+    itemId: z.string(),
+    quantity: z.number().min(1)
+  })).min(1),
+  notes: z.string().optional()
+});

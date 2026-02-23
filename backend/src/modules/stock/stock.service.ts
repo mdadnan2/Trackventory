@@ -160,13 +160,44 @@ export class StockService {
                 0
               ]
             }
+          },
+          totalTransferredOut: {
+            $sum: {
+              $cond: [
+                { $and: [
+                  { $eq: ['$type', TransactionType.VOLUNTEER_TRANSFER] },
+                  { $eq: ['$direction', TransactionDirection.OUT] },
+                  { $eq: ['$performedBy', new mongoose.Types.ObjectId(volunteerId)] }
+                ]},
+                '$quantity',
+                0
+              ]
+            }
+          },
+          totalTransferredIn: {
+            $sum: {
+              $cond: [
+                { $and: [
+                  { $eq: ['$type', TransactionType.VOLUNTEER_TRANSFER] },
+                  { $eq: ['$direction', TransactionDirection.IN] },
+                  { $eq: ['$performedBy', new mongoose.Types.ObjectId(volunteerId)] }
+                ]},
+                '$quantity',
+                0
+              ]
+            }
           }
         }
       },
       {
         $project: {
           itemId: '$_id',
-          stock: { $subtract: ['$totalReceived', { $add: ['$totalDistributed', '$totalDamaged', '$totalReturned'] }] }
+          stock: { 
+            $subtract: [
+              { $add: ['$totalReceived', '$totalTransferredIn'] }, 
+              { $add: ['$totalDistributed', '$totalDamaged', '$totalReturned', '$totalTransferredOut'] }
+            ] 
+          }
         }
       }
     ];
@@ -344,6 +375,78 @@ export class StockService {
       }
 
       return { success: true, message: 'Stock returned to central warehouse' };
+    });
+  }
+
+  async transferStock(fromVolunteerId: string, toVolunteerId: string, items: Array<{ itemId: string; quantity: number }>, performedBy: string, notes?: string) {
+    return withTransaction(async (session) => {
+      const fromVolunteerQuery = User.findOne({ _id: fromVolunteerId, status: 'ACTIVE' });
+      const fromVolunteer = session ? await fromVolunteerQuery.session(session) : await fromVolunteerQuery;
+      if (!fromVolunteer) {
+        throw new NotFoundError('Source volunteer not found or inactive');
+      }
+
+      const toVolunteerQuery = User.findOne({ _id: toVolunteerId, status: 'ACTIVE' });
+      const toVolunteer = session ? await toVolunteerQuery.session(session) : await toVolunteerQuery;
+      if (!toVolunteer) {
+        throw new NotFoundError('Target volunteer not found or inactive');
+      }
+
+      if (fromVolunteerId === toVolunteerId) {
+        throw new BadRequestError('Cannot transfer to the same volunteer');
+      }
+
+      const itemIds = items.map(i => new mongoose.Types.ObjectId(i.itemId));
+      const itemQuery = Item.find({ _id: { $in: itemIds }, isActive: true });
+      const foundItems = session ? await itemQuery.session(session) : await itemQuery;
+      
+      if (foundItems.length !== itemIds.length) {
+        throw new BadRequestError('Some items not found or inactive');
+      }
+
+      const volunteerStock = await this.getVolunteerStock(fromVolunteerId, undefined, session);
+      const stockMap = new Map(volunteerStock.map(s => [s.itemId.toString(), s.stock]));
+
+      for (const item of items) {
+        const available = stockMap.get(item.itemId) || 0;
+        if (available < item.quantity) {
+          throw new BadRequestError(`Insufficient stock for item ${item.itemId}`);
+        }
+      }
+
+      const transactions = [];
+      
+      for (const item of items) {
+        // OUT from source volunteer
+        transactions.push({
+          itemId: new mongoose.Types.ObjectId(item.itemId),
+          type: TransactionType.VOLUNTEER_TRANSFER,
+          direction: TransactionDirection.OUT,
+          quantity: item.quantity,
+          performedBy: new mongoose.Types.ObjectId(fromVolunteerId),
+          referenceType: 'VolunteerTransfer',
+          referenceId: toVolunteerId
+        });
+        
+        // IN to target volunteer
+        transactions.push({
+          itemId: new mongoose.Types.ObjectId(item.itemId),
+          type: TransactionType.VOLUNTEER_TRANSFER,
+          direction: TransactionDirection.IN,
+          quantity: item.quantity,
+          performedBy: new mongoose.Types.ObjectId(toVolunteerId),
+          referenceType: 'VolunteerTransfer',
+          referenceId: fromVolunteerId
+        });
+      }
+
+      if (session) {
+        await InventoryTransaction.insertMany(transactions, { session });
+      } else {
+        await InventoryTransaction.insertMany(transactions);
+      }
+
+      return { success: true, message: 'Stock transferred successfully' };
     });
   }
 }

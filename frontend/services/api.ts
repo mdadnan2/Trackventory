@@ -84,6 +84,10 @@ export const stockAPI = {
   returnStock: (data: any) => {
     console.log('Calling returnStock:', data);
     return api.post('/stock/return', data);
+  },
+  transferStock: (data: any) => {
+    console.log('Calling transferStock:', data);
+    return api.post('/stock/transfer', data);
   }
 };
 

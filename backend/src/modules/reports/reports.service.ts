@@ -403,7 +403,6 @@ export class ReportsService {
     }
 
     const centralStock = await InventoryTransaction.aggregate([
-      { $match: dateFilter },
       {
         $group: {
           _id: '$itemId',
@@ -442,12 +441,35 @@ export class ReportsService {
                 0
               ]
             }
+          },
+          totalCentralDistribution: {
+            $sum: {
+              $cond: [
+                { $eq: ['$type', TransactionType.CENTRAL_DISTRIBUTION] },
+                '$quantity',
+                0
+              ]
+            }
+          },
+          totalCentralDamage: {
+            $sum: {
+              $cond: [
+                { $eq: ['$type', TransactionType.CENTRAL_DAMAGE] },
+                '$quantity',
+                0
+              ]
+            }
           }
         }
       },
       {
         $project: {
-          stock: { $subtract: [{ $add: ['$totalStockIn', '$totalReturned'] }, '$totalIssued'] }
+          stock: { 
+            $subtract: [
+              { $add: ['$totalStockIn', '$totalReturned'] }, 
+              { $add: ['$totalIssued', '$totalCentralDistribution', '$totalCentralDamage'] }
+            ] 
+          }
         }
       },
       {
@@ -459,7 +481,6 @@ export class ReportsService {
     ]);
 
     const volunteerStock = await InventoryTransaction.aggregate([
-      { $match: dateFilter },
       {
         $group: {
           _id: { volunteerId: '$performedBy', itemId: '$itemId' },

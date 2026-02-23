@@ -6,13 +6,14 @@ import MobileStock from '@/components/mobile-volunteer/mobile-pages/stock';
 import { useEffect, useState } from 'react';
 import { stockAPI, itemsAPI, usersAPI, reportsAPI } from '@/services/api';
 import { Item, User, StockItem } from '@/types';
-import { Warehouse, Package, TrendingUp, AlertCircle, Plus, Minus, Undo2, Info } from 'lucide-react';
+import { Warehouse, Package, TrendingUp, AlertCircle, Plus, Minus, Undo2, Info, ArrowRightLeft } from 'lucide-react';
 import PageHeader from '@/components/ui/page-header';
 import ContentCard from '@/components/ui/content-card';
 import FormSection from '@/components/ui/form-section';
 import FormField from '@/components/ui/form-field';
 import Button from '@/components/ui/button';
 import { ToastContainer } from '@/components/ui/toast';
+import TransferStockModal from '@/components/ui/transfer-stock-modal';
 import { motion } from 'framer-motion';
 import DataTable from '@/components/ui/data-table';
 import { Pagination } from '@/components/ui/pagination';
@@ -28,6 +29,7 @@ export default function StockPage() {
   const [selectedVolunteer, setSelectedVolunteer] = useState('');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null);
   const [showReturnModal, setShowReturnModal] = useState(false);
+  const [showTransferModal, setShowTransferModal] = useState(false);
   const [returnItems, setReturnItems] = useState<Array<{ itemId: string; quantity: number }>>([{ itemId: '', quantity: 0 }]);
   const [returnNotes, setReturnNotes] = useState('');
   const [stockSummary, setStockSummary] = useState<any[]>([]);
@@ -37,11 +39,13 @@ export default function StockPage() {
   const [selectedItemDetails, setSelectedItemDetails] = useState<any>(null);
 
   useEffect(() => {
-    loadData();
-    if (user?.role === 'ADMIN') {
-      loadStockSummary(1);
+    if (user) {
+      loadData();
+      if (user.role === 'ADMIN') {
+        loadStockSummary(1);
+      }
     }
-  }, []);
+  }, [user]);
 
   const loadStockSummary = async (page: number) => {
     setLoading(true);
@@ -90,10 +94,20 @@ export default function StockPage() {
           usersAPI.getAll(1, 100)
         ]);
         setItems(itemsRes.data.data.data || itemsRes.data.data.items || []);
-        setVolunteers(usersRes.data.data.data?.filter((u: User) => u.role === 'VOLUNTEER') || usersRes.data.data.users?.filter((u: User) => u.role === 'VOLUNTEER') || []);
+        const allUsers = usersRes.data.data.data || usersRes.data.data.users || [];
+        setVolunteers(allUsers.filter((u: User) => u.role === 'VOLUNTEER'));
       } else if (user?.role === 'VOLUNTEER') {
-        const stockRes = await stockAPI.getVolunteerStock(user._id);
-        setMyStock(stockRes.data.data);
+        const volunteerId = user._id || user.id;
+        const [stockRes, usersRes] = await Promise.all([
+          stockAPI.getVolunteerStock(volunteerId),
+          usersAPI.getAll(1, 100)
+        ]);
+        const stockData = stockRes.data.success ? stockRes.data.data : [];
+        console.log('About to setMyStock with:', stockData);
+        setMyStock(stockData);
+        console.log('After setMyStock called');
+        const allUsers = usersRes.data.data.data || usersRes.data.data.users || [];
+        setVolunteers(allUsers.filter((u: User) => u.role === 'VOLUNTEER'));
       }
     } catch (error) {
       console.error('Error loading data:', error);
@@ -129,6 +143,9 @@ export default function StockPage() {
       await stockAPI.addStock({ items: stockItems });
       setToast({ message: 'Stock added successfully!', type: 'success' });
       setStockItems([{ itemId: '', quantity: 0 }]);
+      if (user?.role === 'ADMIN') {
+        loadStockSummary(pagination.currentPage);
+      }
     } catch (error: any) {
       setToast({ message: error.response?.data?.error || 'Error adding stock', type: 'error' });
     }
@@ -141,6 +158,9 @@ export default function StockPage() {
       setToast({ message: 'Stock assigned successfully!', type: 'success' });
       setStockItems([{ itemId: '', quantity: 0 }]);
       setSelectedVolunteer('');
+      if (user?.role === 'ADMIN') {
+        loadStockSummary(pagination.currentPage);
+      }
     } catch (error: any) {
       setToast({ message: error.response?.data?.error || 'Error assigning stock', type: 'error' });
     }
@@ -161,6 +181,8 @@ export default function StockPage() {
   };
 
   if (user?.role === 'VOLUNTEER') {
+    console.log('Rendering volunteer view, isMobile:', isMobile, 'myStock:', myStock);
+    
     if (isMobile) {
       return <MobileStock />;
     }
@@ -247,7 +269,23 @@ export default function StockPage() {
                     <h2 className="text-xl font-semibold text-slate-900">Stock Details</h2>
                     <p className="text-sm text-slate-500 mt-1">Your current inventory status</p>
                   </div>
-                  <Warehouse className="text-blue-600" size={24} />
+                  <div className="flex items-center gap-3">
+                    <Button
+                      variant="primary"
+                      onClick={() => setShowTransferModal(true)}
+                      disabled={myStock.length === 0}
+                    >
+                      <ArrowRightLeft size={18} className="mr-2" />
+                      Transfer Stock
+                    </Button>
+                    <Button
+                      variant="primary"
+                      onClick={() => setShowReturnModal(true)}
+                      disabled={myStock.length === 0}
+                    >
+                      Return Stock
+                    </Button>
+                  </div>
                 </div>
 
                 {myStock.length === 0 ? (
@@ -297,12 +335,25 @@ export default function StockPage() {
           </motion.div>
         </motion.div>
 
+        <TransferStockModal
+          isOpen={showTransferModal}
+          onClose={() => setShowTransferModal(false)}
+          currentUser={user}
+          volunteers={volunteers}
+          myStock={myStock}
+          onSuccess={() => {
+            setToast({ message: 'Stock transferred successfully!', type: 'success' });
+            loadData();
+          }}
+          onError={(message) => setToast({ message, type: 'error' })}
+        />
+
         {showReturnModal && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+              className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col"
             >
               <div className="p-6 border-b border-slate-200">
                 <div className="flex items-center justify-between">
@@ -324,7 +375,7 @@ export default function StockPage() {
                 </div>
               </div>
 
-              <form onSubmit={handleReturnStock} className="p-6 space-y-6">
+              <form onSubmit={handleReturnStock} className="p-6 space-y-6 overflow-y-auto flex-1">
                 {returnItems.map((item, index) => (
                   <div key={index} className="flex gap-4">
                     <FormField label="Item" required fullWidth>
@@ -393,7 +444,7 @@ export default function StockPage() {
                   />
                 </FormField>
 
-                <div className="flex gap-3 pt-4">
+                <div className="flex gap-3 pt-4 border-t border-slate-200 bg-white sticky bottom-0">
                   <Button
                     type="button"
                     variant="secondary"

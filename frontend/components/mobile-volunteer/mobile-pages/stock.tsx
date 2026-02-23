@@ -3,25 +3,38 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useOfflineQueue } from '@/hooks/useOfflineQueue';
-import { stockAPI, distributionAPI } from '@/services/api';
+import { stockAPI, distributionAPI, usersAPI } from '@/services/api';
 import ScreenContainer from '../ScreenContainer';
 import ActionCard from '../ActionCard';
 import QuantityStepper from '../QuantityStepper';
 import StickyActionBar from '../StickyActionBar';
-import { Package, AlertTriangle, XCircle, RotateCcw } from 'lucide-react';
+import { Package, AlertTriangle, XCircle, RotateCcw, ArrowRightLeft } from 'lucide-react';
 
 export default function MobileStock() {
   const { user } = useAuth();
   const { addToQueue } = useOfflineQueue();
   const [stock, setStock] = useState<any[]>([]);
+  const [volunteers, setVolunteers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [actionMode, setActionMode] = useState<{ type: 'DAMAGE' | 'LOSS' | 'RETURN'; itemId: string } | null>(null);
+  const [actionMode, setActionMode] = useState<{ type: 'DAMAGE' | 'LOSS' | 'RETURN' | 'TRANSFER'; itemId: string } | null>(null);
   const [quantity, setQuantity] = useState(0);
+  const [selectedVolunteer, setSelectedVolunteer] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     loadData();
+    loadVolunteers();
   }, [user]);
+
+  const loadVolunteers = async () => {
+    try {
+      const res = await usersAPI.getAll(1, 100);
+      const allVolunteers = res.data.data.data || res.data.data.users || [];
+      setVolunteers(allVolunteers.filter((v: any) => v.role === 'VOLUNTEER' && v._id !== user?._id));
+    } catch (error) {
+      console.error('Error loading volunteers:', error);
+    }
+  };
 
   const loadData = async () => {
     try {
@@ -46,6 +59,12 @@ export default function MobileStock() {
 
       if (actionMode.type === 'DAMAGE') {
         await distributionAPI.reportDamage(payload);
+      } else if (actionMode.type === 'TRANSFER') {
+        await stockAPI.transferStock({
+          fromVolunteerId: user?._id,
+          toVolunteerId: selectedVolunteer,
+          items: [{ itemId: actionMode.itemId, quantity }]
+        });
       }
       // For LOSS and RETURN, use damage endpoint (backend maps to correct transaction type)
       
@@ -60,11 +79,13 @@ export default function MobileStock() {
 
       setActionMode(null);
       setQuantity(0);
+      setSelectedVolunteer('');
     } catch (error) {
       console.error('Error:', error);
       addToQueue(actionMode.type, { items: [{ itemId: actionMode.itemId, quantity }] });
       setActionMode(null);
       setQuantity(0);
+      setSelectedVolunteer('');
     } finally {
       setSubmitting(false);
     }
@@ -94,6 +115,7 @@ export default function MobileStock() {
       DAMAGE: { title: 'Report Damage', icon: AlertTriangle, color: 'text-orange-600', variant: 'danger' as const },
       LOSS: { title: 'Report Loss', icon: XCircle, color: 'text-red-600', variant: 'danger' as const },
       RETURN: { title: 'Return Items', icon: RotateCcw, color: 'text-blue-600', variant: 'primary' as const },
+      TRANSFER: { title: 'Transfer Stock', icon: ArrowRightLeft, color: 'text-purple-600', variant: 'primary' as const },
     };
     const config = actionConfig[actionMode.type];
 
@@ -116,11 +138,29 @@ export default function MobileStock() {
               max={item?.stock || 0}
               label="Quantity"
             />
+            {actionMode.type === 'TRANSFER' && (
+              <div className="mt-4">
+                <label className="block text-sm font-medium text-slate-700 mb-2">Transfer To</label>
+                <select
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-slate-900"
+                  value={selectedVolunteer}
+                  onChange={(e) => setSelectedVolunteer(e.target.value)}
+                  required
+                >
+                  <option value="">Select Volunteer</option>
+                  {volunteers.map((v) => (
+                    <option key={v._id} value={v._id}>
+                      {v.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </ActionCard>
         </div>
         <StickyActionBar
           onClick={handleAction}
-          disabled={quantity === 0 || submitting}
+          disabled={quantity === 0 || submitting || (actionMode.type === 'TRANSFER' && !selectedVolunteer)}
           loading={submitting}
           variant={config.variant}
         >
@@ -159,26 +199,33 @@ export default function MobileStock() {
                     {status.label}
                   </div>
 
-                  <div className="grid grid-cols-3 gap-2 pt-2">
+                  <div className="grid grid-cols-4 gap-2 pt-2">
+                    <button
+                      onClick={() => setActionMode({ type: 'TRANSFER', itemId: item.itemId })}
+                      className="h-12 bg-purple-50 text-purple-700 rounded-xl text-xs font-medium active:scale-95 transition-transform flex items-center justify-center gap-1"
+                    >
+                      <ArrowRightLeft size={14} />
+                      Transfer
+                    </button>
                     <button
                       onClick={() => setActionMode({ type: 'DAMAGE', itemId: item.itemId })}
-                      className="h-12 bg-orange-50 text-orange-700 rounded-xl text-sm font-medium active:scale-95 transition-transform flex items-center justify-center gap-1"
+                      className="h-12 bg-orange-50 text-orange-700 rounded-xl text-xs font-medium active:scale-95 transition-transform flex items-center justify-center gap-1"
                     >
-                      <AlertTriangle size={16} />
+                      <AlertTriangle size={14} />
                       Damage
                     </button>
                     <button
                       onClick={() => setActionMode({ type: 'LOSS', itemId: item.itemId })}
-                      className="h-12 bg-red-50 text-red-700 rounded-xl text-sm font-medium active:scale-95 transition-transform flex items-center justify-center gap-1"
+                      className="h-12 bg-red-50 text-red-700 rounded-xl text-xs font-medium active:scale-95 transition-transform flex items-center justify-center gap-1"
                     >
-                      <XCircle size={16} />
+                      <XCircle size={14} />
                       Loss
                     </button>
                     <button
                       onClick={() => setActionMode({ type: 'RETURN', itemId: item.itemId })}
-                      className="h-12 bg-blue-50 text-blue-700 rounded-xl text-sm font-medium active:scale-95 transition-transform flex items-center justify-center gap-1"
+                      className="h-12 bg-blue-50 text-blue-700 rounded-xl text-xs font-medium active:scale-95 transition-transform flex items-center justify-center gap-1"
                     >
-                      <RotateCcw size={16} />
+                      <RotateCcw size={14} />
                       Return
                     </button>
                   </div>

@@ -12,7 +12,7 @@ router.use(verifyFirebaseToken);
 router.use(attachUser);
 
 router.post('/', roleGuard(UserRole.ADMIN), usersController.createUser.bind(usersController));
-router.get('/', roleGuard(UserRole.ADMIN), usersController.getUsers.bind(usersController));
+router.get('/', usersController.getUsers.bind(usersController));
 router.get('/:id', roleGuard(UserRole.ADMIN), usersController.getUserById.bind(usersController));
 router.patch('/:id', roleGuard(UserRole.ADMIN), usersController.updateUser.bind(usersController));
 

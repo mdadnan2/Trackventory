@@ -50,13 +50,36 @@ export class ReportsService {
                 0
               ]
             }
+          },
+          totalCentralDistribution: {
+            $sum: {
+              $cond: [
+                { $eq: ['$type', TransactionType.CENTRAL_DISTRIBUTION] },
+                '$quantity',
+                0
+              ]
+            }
+          },
+          totalCentralDamage: {
+            $sum: {
+              $cond: [
+                { $eq: ['$type', TransactionType.CENTRAL_DAMAGE] },
+                '$quantity',
+                0
+              ]
+            }
           }
         }
       },
       {
         $project: {
           itemId: '$_id',
-          centralStock: { $subtract: [{ $add: ['$totalStockIn', '$totalReturned'] }, '$totalIssued'] }
+          centralStock: { 
+            $subtract: [
+              { $add: ['$totalStockIn', '$totalReturned'] }, 
+              { $add: ['$totalIssued', '$totalCentralDistribution', '$totalCentralDamage'] }
+            ] 
+          }
         }
       }
     ]);
@@ -128,7 +151,12 @@ export class ReportsService {
 
     const distributed = await InventoryTransaction.aggregate([
       {
-        $match: { type: TransactionType.DISTRIBUTION }
+        $match: { 
+          $or: [
+            { type: TransactionType.DISTRIBUTION },
+            { type: TransactionType.CENTRAL_DISTRIBUTION }
+          ]
+        }
       },
       {
         $group: {
@@ -140,7 +168,12 @@ export class ReportsService {
 
     const damaged = await InventoryTransaction.aggregate([
       {
-        $match: { type: TransactionType.DAMAGE }
+        $match: { 
+          $or: [
+            { type: TransactionType.DAMAGE },
+            { type: TransactionType.CENTRAL_DAMAGE }
+          ]
+        }
       },
       {
         $group: {
@@ -359,5 +392,199 @@ export class ReportsService {
     const skip = (p - 1) * l;
     const paginatedResult = result.slice(skip, skip + l);
     return createPaginatedResponse(paginatedResult, result.length, p, l);
+  }
+
+  async getDashboardMetrics(startDate?: Date, endDate?: Date) {
+    const dateFilter: any = {};
+    if (startDate || endDate) {
+      dateFilter.createdAt = {};
+      if (startDate) dateFilter.createdAt.$gte = startDate;
+      if (endDate) dateFilter.createdAt.$lte = endDate;
+    }
+
+    const centralStock = await InventoryTransaction.aggregate([
+      { $match: dateFilter },
+      {
+        $group: {
+          _id: '$itemId',
+          totalStockIn: {
+            $sum: {
+              $cond: [
+                { $and: [
+                  { $eq: ['$type', TransactionType.STOCK_IN] },
+                  { $eq: ['$direction', TransactionDirection.IN] }
+                ]},
+                '$quantity',
+                0
+              ]
+            }
+          },
+          totalIssued: {
+            $sum: {
+              $cond: [
+                { $and: [
+                  { $eq: ['$type', TransactionType.ISSUE_TO_VOLUNTEER] },
+                  { $eq: ['$direction', TransactionDirection.OUT] }
+                ]},
+                '$quantity',
+                0
+              ]
+            }
+          },
+          totalReturned: {
+            $sum: {
+              $cond: [
+                { $and: [
+                  { $eq: ['$type', TransactionType.RETURN_TO_CENTRAL] },
+                  { $eq: ['$direction', TransactionDirection.IN] }
+                ]},
+                '$quantity',
+                0
+              ]
+            }
+          }
+        }
+      },
+      {
+        $project: {
+          stock: { $subtract: [{ $add: ['$totalStockIn', '$totalReturned'] }, '$totalIssued'] }
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          totalCentralStock: { $sum: '$stock' }
+        }
+      }
+    ]);
+
+    const volunteerStock = await InventoryTransaction.aggregate([
+      { $match: dateFilter },
+      {
+        $group: {
+          _id: { volunteerId: '$performedBy', itemId: '$itemId' },
+          totalReceived: {
+            $sum: {
+              $cond: [
+                { $and: [
+                  { $eq: ['$type', TransactionType.ISSUE_TO_VOLUNTEER] },
+                  { $eq: ['$direction', TransactionDirection.IN] }
+                ]},
+                '$quantity',
+                0
+              ]
+            }
+          },
+          totalDistributed: {
+            $sum: {
+              $cond: [
+                { $and: [
+                  { $eq: ['$type', TransactionType.DISTRIBUTION] },
+                  { $eq: ['$direction', TransactionDirection.OUT] }
+                ]},
+                '$quantity',
+                0
+              ]
+            }
+          },
+          totalDamaged: {
+            $sum: {
+              $cond: [
+                { $and: [
+                  { $eq: ['$type', TransactionType.DAMAGE] },
+                  { $eq: ['$direction', TransactionDirection.OUT] }
+                ]},
+                '$quantity',
+                0
+              ]
+            }
+          },
+          totalReturned: {
+            $sum: {
+              $cond: [
+                { $and: [
+                  { $eq: ['$type', TransactionType.RETURN_TO_CENTRAL] },
+                  { $eq: ['$direction', TransactionDirection.OUT] }
+                ]},
+                '$quantity',
+                0
+              ]
+            }
+          }
+        }
+      },
+      {
+        $project: {
+          volunteerId: '$_id.volunteerId',
+          stock: { $subtract: ['$totalReceived', { $add: ['$totalDistributed', '$totalDamaged', '$totalReturned'] }] }
+        }
+      },
+      {
+        $match: { stock: { $gt: 0 } }
+      },
+      {
+        $group: {
+          _id: null,
+          totalVolunteerStock: { $sum: '$stock' },
+          volunteersWithStock: { $addToSet: '$volunteerId' }
+        }
+      }
+    ]);
+
+    const distributed = await InventoryTransaction.aggregate([
+      { 
+        $match: { 
+          ...dateFilter, 
+          $or: [
+            { type: TransactionType.DISTRIBUTION },
+            { type: TransactionType.CENTRAL_DISTRIBUTION }
+          ]
+        } 
+      },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: '$quantity' }
+        }
+      }
+    ]);
+
+    const damaged = await InventoryTransaction.aggregate([
+      { 
+        $match: { 
+          ...dateFilter, 
+          $or: [
+            { type: TransactionType.DAMAGE },
+            { type: TransactionType.CENTRAL_DAMAGE }
+          ]
+        } 
+      },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: '$quantity' }
+        }
+      }
+    ]);
+
+    const totalCentralStock = centralStock[0]?.totalCentralStock || 0;
+    const totalVolunteerStock = volunteerStock[0]?.totalVolunteerStock || 0;
+    const volunteersCount = volunteerStock[0]?.volunteersWithStock?.length || 0;
+    const totalDistributed = distributed[0]?.total || 0;
+    const totalDamaged = damaged[0]?.total || 0;
+
+    return {
+      inStock: {
+        total: totalCentralStock + totalVolunteerStock,
+        central: totalCentralStock,
+        volunteers: totalVolunteerStock
+      },
+      withVolunteers: {
+        totalItems: totalVolunteerStock,
+        volunteersCount
+      },
+      distributed: totalDistributed,
+      damaged: totalDamaged
+    };
   }
 }

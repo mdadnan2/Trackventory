@@ -98,7 +98,9 @@ export const reportsAPI = {
   getVolunteerStock: (page?: number, limit?: number) => api.get('/reports/volunteer-stock', { params: { page, limit } }),
   getCampaignDistribution: (campaignId?: string, page?: number, limit?: number) => 
     api.get('/reports/campaign-distribution', { params: { campaignId, page, limit } }),
-  getRepeatDistribution: (page?: number, limit?: number) => api.get('/reports/repeat-distribution', { params: { page, limit } })
+  getRepeatDistribution: (page?: number, limit?: number) => api.get('/reports/repeat-distribution', { params: { page, limit } }),
+  getDashboardMetrics: (params?: { startDate?: string; endDate?: string }) => 
+    api.get('/reports/dashboard-metrics', { params })
 };
 
 export default api;

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 export const createDistributionSchema = z.object({
+  volunteerId: z.string().optional(),
   state: z.string().min(1),
   city: z.string().min(1),
   pinCode: z.string().min(1),
@@ -14,6 +15,7 @@ export const createDistributionSchema = z.object({
 });
 
 export const reportDamageSchema = z.object({
+  volunteerId: z.string().optional(),
   items: z.array(z.object({
     itemId: z.string(),
     quantity: z.number().min(1)

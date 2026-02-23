@@ -514,7 +514,7 @@ export default function StockPage() {
                   >
                     <option value="">Select Volunteer</option>
                     {volunteers?.map((v) => (
-                      <option key={v._id} value={v._id}>{v.name} ({v.email})</option>
+                      <option key={v._id} value={v._id}>{v.name}</option>
                     ))}
                   </select>
                 </FormField>

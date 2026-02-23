@@ -13,5 +13,6 @@ router.get('/stock-summary', reportsController.getCurrentStockSummary.bind(repor
 router.get('/volunteer-stock', reportsController.getVolunteerStockSummary.bind(reportsController));
 router.get('/campaign-distribution', reportsController.getCampaignDistributionSummary.bind(reportsController));
 router.get('/repeat-distribution', reportsController.getRepeatDistributionHistory.bind(reportsController));
+router.get('/dashboard-metrics', reportsController.getDashboardMetrics.bind(reportsController));
 
 export default router;

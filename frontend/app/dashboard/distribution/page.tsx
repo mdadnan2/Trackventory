@@ -58,6 +58,8 @@ export default function DistributionPage() {
       loadVolunteerStock(selectedVolunteer);
     } else if (user?.role === 'VOLUNTEER') {
       setSelectedVolunteer(user._id);
+    } else if (user?.role === 'ADMIN') {
+      loadCentralStock();
     }
   }, [selectedVolunteer, user]);
 
@@ -106,6 +108,15 @@ export default function DistributionPage() {
     }
   };
 
+  const loadCentralStock = async () => {
+    try {
+      const stockRes = await stockAPI.getCentralStock();
+      setMyStock(stockRes.data.data);
+    } catch (error) {
+      console.error('Error loading central stock:', error);
+    }
+  };
+
   const addItem = () => {
     setFormData({
       ...formData,
@@ -133,12 +144,20 @@ export default function DistributionPage() {
   const handleDistribute = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const volunteerId = user?.role === 'ADMIN' ? selectedVolunteer : user?._id;
-      const requestId = `${volunteerId}-${Date.now()}`;
-      await distributionAPI.create({ ...formData, requestId });
+      const volunteerId = user?.role === 'ADMIN' ? (selectedVolunteer || undefined) : user?._id;
+      const requestId = `${volunteerId || user?._id}-${Date.now()}`;
+      const payload: any = { ...formData, requestId };
+      if (volunteerId) {
+        payload.volunteerId = volunteerId;
+      }
+      await distributionAPI.create(payload);
       setToast({ message: 'Distribution recorded successfully!', type: 'success' });
       setFormData({ state: '', city: '', pinCode: '', area: '', campaignId: '', items: [{ itemId: '', quantity: 0 }] });
-      loadVolunteerStock(volunteerId!);
+      if (volunteerId) {
+        loadVolunteerStock(volunteerId);
+      } else {
+        loadCentralStock();
+      }
     } catch (error: any) {
       setToast({ message: error.response?.data?.error || 'Error recording distribution', type: 'error' });
     }
@@ -147,12 +166,20 @@ export default function DistributionPage() {
   const handleDamage = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const volunteerId = user?.role === 'ADMIN' ? selectedVolunteer : user?._id;
-      const requestId = `damage-${volunteerId}-${Date.now()}`;
-      await distributionAPI.reportDamage({ items: formData.items, requestId });
+      const volunteerId = user?.role === 'ADMIN' ? (selectedVolunteer || undefined) : user?._id;
+      const requestId = `damage-${volunteerId || user?._id}-${Date.now()}`;
+      const payload: any = { items: formData.items, requestId };
+      if (volunteerId) {
+        payload.volunteerId = volunteerId;
+      }
+      await distributionAPI.reportDamage(payload);
       setToast({ message: 'Damage reported successfully!', type: 'success' });
       setFormData({ state: '', city: '', pinCode: '', area: '', campaignId: '', items: [{ itemId: '', quantity: 0 }] });
-      loadVolunteerStock(volunteerId!);
+      if (volunteerId) {
+        loadVolunteerStock(volunteerId);
+      } else {
+        loadCentralStock();
+      }
     } catch (error: any) {
       setToast({ message: error.response?.data?.error || 'Error reporting damage', type: 'error' });
     }
@@ -206,18 +233,17 @@ export default function DistributionPage() {
               {activeTab === 'distribute' && (
                 <form onSubmit={handleDistribute} className="space-y-6">
                   {user?.role === 'ADMIN' && (
-                    <FormSection title="Volunteer" description="Select volunteer recording this distribution">
-                      <FormField label="Select Volunteer" required fullWidth>
+                    <FormSection title="Volunteer" description="Select volunteer or leave empty to distribute from central stock">
+                      <FormField label="Select Volunteer" helper="Optional - Leave empty to use central stock" fullWidth>
                         <select
                           className="input"
                           value={selectedVolunteer}
                           onChange={(e) => setSelectedVolunteer(e.target.value)}
-                          required
                         >
-                          <option value="">Choose a volunteer...</option>
+                          <option value="">Central Stock (Admin)</option>
                           {volunteers.map((v) => (
                             <option key={v._id} value={v._id}>
-                              {v.name} ({v.email})
+                              {v.name}
                             </option>
                           ))}
                         </select>
@@ -339,18 +365,17 @@ export default function DistributionPage() {
               {activeTab === 'damage' && (
                 <form onSubmit={handleDamage} className="space-y-6">
                   {user?.role === 'ADMIN' && (
-                    <FormSection title="Volunteer" description="Select volunteer reporting this damage">
-                      <FormField label="Select Volunteer" required fullWidth>
+                    <FormSection title="Volunteer" description="Select volunteer or leave empty to report damage from central stock">
+                      <FormField label="Select Volunteer" helper="Optional - Leave empty to use central stock" fullWidth>
                         <select
                           className="input"
                           value={selectedVolunteer}
                           onChange={(e) => setSelectedVolunteer(e.target.value)}
-                          required
                         >
-                          <option value="">Choose a volunteer...</option>
+                          <option value="">Central Stock (Admin)</option>
                           {volunteers.map((v) => (
                             <option key={v._id} value={v._id}>
-                              {v.name} ({v.email})
+                              {v.name}
                             </option>
                           ))}
                         </select>
@@ -419,7 +444,9 @@ export default function DistributionPage() {
         <ContentCard className="p-6">
           <div className="flex items-center gap-2 mb-4">
             <Package size={20} className="text-blue-600" />
-            <h2 className="text-lg font-semibold text-slate-900">My Stock</h2>
+            <h2 className="text-lg font-semibold text-slate-900">
+              {selectedVolunteer ? 'Volunteer Stock' : 'Central Stock'}
+            </h2>
           </div>
           <div className="space-y-2">
             {myStock.length === 0 ? (

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Clock } from 'lucide-react';
+import { Clock, RefreshCw } from 'lucide-react';
 import { distributionAPI } from '@/services/api';
 
 export default function RecentActivity() {
@@ -11,14 +11,21 @@ export default function RecentActivity() {
 
   useEffect(() => {
     loadActivities();
+    const interval = setInterval(loadActivities, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   const loadActivities = async () => {
     try {
+      setLoading(true);
       const res = await distributionAPI.getAll({ page: 1, limit: 5 });
-      setActivities(res.data.data.distributions || []);
+      console.log('Recent Activity API Response:', res.data);
+      const distributionsData = res.data.data?.distributions || res.data.data?.data || [];
+      console.log('Distributions Data:', distributionsData);
+      setActivities(distributionsData);
     } catch (error) {
       console.error('Error loading activities:', error);
+      setActivities([]);
     } finally {
       setLoading(false);
     }
@@ -40,9 +47,19 @@ export default function RecentActivity() {
       className="bg-white rounded-2xl border border-slate-200 overflow-hidden"
     >
       <div className="p-6 border-b border-slate-200">
-        <div className="flex items-center gap-2">
-          <Clock size={20} className="text-slate-600" />
-          <h3 className="text-lg font-semibold text-slate-900">Recent Activity</h3>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Clock size={20} className="text-slate-600" />
+            <h3 className="text-lg font-semibold text-slate-900">Recent Activity</h3>
+          </div>
+          <button
+            onClick={loadActivities}
+            disabled={loading}
+            className="p-2 hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-50"
+            title="Refresh"
+          >
+            <RefreshCw size={16} className={`text-slate-600 ${loading ? 'animate-spin' : ''}`} />
+          </button>
         </div>
       </div>
       

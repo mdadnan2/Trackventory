@@ -11,6 +11,7 @@ import StatCard from '@/components/dashboard/stat-card';
 import Charts from '@/components/dashboard/charts';
 import RecentActivity from '@/components/dashboard/recent-activity';
 import DashboardSkeleton from '@/components/ui/loading-skeleton';
+import DashboardFilterCards from '@/components/dashboard/dashboard-filter-cards';
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -139,39 +140,10 @@ export default function DashboardPage() {
 
       {user?.role === 'ADMIN' && (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <StatCard
-              title="Central Stock"
-              value={stats.central}
-              description="Items in central warehouse"
-              icon={Warehouse}
-              color="bg-gradient-to-br from-blue-500 to-blue-600"
-              index={0}
-            />
-            <StatCard
-              title="With Volunteers"
-              value={stats.volunteer}
-              description="Items assigned to field"
-              icon={Users}
-              color="bg-gradient-to-br from-purple-500 to-purple-600"
-              index={1}
-            />
-            <StatCard
-              title="Distributed"
-              value={stats.distributed}
-              description="Total items distributed"
-              icon={TrendingUp}
-              color="bg-gradient-to-br from-green-500 to-green-600"
-              index={2}
-            />
-            <StatCard
-              title="Damaged"
-              value={stats.damaged}
-              description="Items reported damaged"
-              icon={AlertTriangle}
-              color="bg-gradient-to-br from-red-500 to-red-600"
-              index={3}
-            />
+          <DashboardFilterCards />
+
+          <div className="grid grid-cols-1 gap-6">
+            <RecentActivity />
           </div>
 
           <Charts itemData={itemChartData} trendData={distributionTrendData} />
@@ -339,8 +311,6 @@ export default function DashboardPage() {
           </div>
         </>
       )}
-
-      {user?.role === 'ADMIN' && <RecentActivity />}
     </motion.div>
   );
 }

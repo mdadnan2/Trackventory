@@ -10,7 +10,8 @@ export class DistributionController {
   async createDistribution(req: UserRequest, res: Response, next: NextFunction) {
     try {
       const data = createDistributionSchema.parse(req.body);
-      const distribution = await distributionService.createDistribution(req.user!._id.toString(), data);
+      const volunteerId = data.volunteerId || undefined;
+      const distribution = await distributionService.createDistribution(volunteerId, data, req.user!._id.toString());
       sendSuccess(res, distribution, 201);
     } catch (error) {
       next(error);
@@ -20,7 +21,8 @@ export class DistributionController {
   async reportDamage(req: UserRequest, res: Response, next: NextFunction) {
     try {
       const data = reportDamageSchema.parse(req.body);
-      const result = await distributionService.reportDamage(req.user!._id.toString(), data);
+      const volunteerId = data.volunteerId || undefined;
+      const result = await distributionService.reportDamage(volunteerId, data, req.user!._id.toString());
       sendSuccess(res, result, 201);
     } catch (error) {
       next(error);

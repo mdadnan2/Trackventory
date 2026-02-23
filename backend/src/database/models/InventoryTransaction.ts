@@ -6,7 +6,9 @@ export enum TransactionType {
   DISTRIBUTION = 'DISTRIBUTION',
   DAMAGE = 'DAMAGE',
   ADJUSTMENT = 'ADJUSTMENT',
-  RETURN_TO_CENTRAL = 'RETURN_TO_CENTRAL'
+  RETURN_TO_CENTRAL = 'RETURN_TO_CENTRAL',
+  CENTRAL_DISTRIBUTION = 'CENTRAL_DISTRIBUTION',
+  CENTRAL_DAMAGE = 'CENTRAL_DAMAGE'
 }
 
 export enum TransactionDirection {
@@ -20,7 +22,7 @@ export interface IInventoryTransaction extends Document {
   direction: TransactionDirection;
   quantity: number;
   referenceType?: string;
-  referenceId?: mongoose.Types.ObjectId;
+  referenceId?: mongoose.Types.ObjectId | string;
   performedBy: mongoose.Types.ObjectId;
   createdAt: Date;
 }
@@ -31,7 +33,7 @@ const inventoryTransactionSchema = new Schema<IInventoryTransaction>({
   direction: { type: String, enum: Object.values(TransactionDirection), required: true },
   quantity: { type: Number, required: true, min: 1 },
   referenceType: { type: String },
-  referenceId: { type: Schema.Types.ObjectId },
+  referenceId: { type: Schema.Types.Mixed },
   performedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   createdAt: { type: Date, default: Date.now }
 });

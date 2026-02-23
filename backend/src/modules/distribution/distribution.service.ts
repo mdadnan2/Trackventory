@@ -12,7 +12,7 @@ const stockService = new StockService();
 
 export class DistributionService {
   async createDistribution(
-    volunteerId: string,
+    volunteerId: string | undefined,
     data: {
       state: string;
       city: string;
@@ -21,7 +21,8 @@ export class DistributionService {
       campaignId?: string;
       items: Array<{ itemId: string; quantity: number }>;
       requestId: string;
-    }
+    },
+    performedBy: string
   ) {
     return withTransaction(async (session) => {
       const existingDistribution = await Distribution.findOne({ requestId: data.requestId }).session(session);
@@ -43,18 +44,35 @@ export class DistributionService {
         throw new BadRequestError('Some items not found or inactive');
       }
 
-      const volunteerStock = await stockService.getVolunteerStock(volunteerId);
-      const stockMap = new Map(volunteerStock.map(s => [s.itemId.toString(), s.stock]));
+      // Check stock availability
+      if (volunteerId) {
+        // Distribution from volunteer stock
+        const volunteerStock = await stockService.getVolunteerStock(volunteerId, undefined, session);
+        const stockMap = new Map(volunteerStock.map(s => [s.itemId.toString(), s.stock]));
 
-      for (const item of data.items) {
-        const available = stockMap.get(item.itemId) || 0;
-        if (available < item.quantity) {
-          throw new BadRequestError(`Insufficient volunteer stock for item ${item.itemId}`);
+        for (const item of data.items) {
+          const available = stockMap.get(item.itemId) || 0;
+          if (available < item.quantity) {
+            const itemName = foundItems.find(i => i._id.toString() === item.itemId)?.name || item.itemId;
+            throw new BadRequestError(`Insufficient volunteer stock for ${itemName}. Available: ${available}, Requested: ${item.quantity}`);
+          }
+        }
+      } else {
+        // Distribution from central stock
+        const centralStock = await stockService.getCentralStock();
+        const stockMap = new Map(centralStock.map(s => [s.itemId.toString(), s.stock]));
+
+        for (const item of data.items) {
+          const available = stockMap.get(item.itemId) || 0;
+          if (available < item.quantity) {
+            const itemName = foundItems.find(i => i._id.toString() === item.itemId)?.name || item.itemId;
+            throw new BadRequestError(`Insufficient central stock for ${itemName}. Available: ${available}, Requested: ${item.quantity}`);
+          }
         }
       }
 
       const distribution = await Distribution.create([{
-        volunteerId: new mongoose.Types.ObjectId(volunteerId),
+        volunteerId: volunteerId ? new mongoose.Types.ObjectId(volunteerId) : new mongoose.Types.ObjectId(performedBy),
         state: data.state,
         city: data.city,
         pinCode: data.pinCode,
@@ -69,12 +87,12 @@ export class DistributionService {
 
       const transactions = data.items.map(item => ({
         itemId: new mongoose.Types.ObjectId(item.itemId),
-        type: TransactionType.DISTRIBUTION,
+        type: volunteerId ? TransactionType.DISTRIBUTION : TransactionType.CENTRAL_DISTRIBUTION,
         direction: TransactionDirection.OUT,
         quantity: item.quantity,
         referenceType: 'Distribution',
         referenceId: distribution[0]._id,
-        performedBy: new mongoose.Types.ObjectId(volunteerId)
+        performedBy: volunteerId ? new mongoose.Types.ObjectId(volunteerId) : new mongoose.Types.ObjectId(performedBy)
       }));
 
       await InventoryTransaction.insertMany(transactions, { session });
@@ -84,11 +102,12 @@ export class DistributionService {
   }
 
   async reportDamage(
-    volunteerId: string,
+    volunteerId: string | undefined,
     data: {
       items: Array<{ itemId: string; quantity: number }>;
       requestId: string;
-    }
+    },
+    performedBy: string
   ) {
     return withTransaction(async (session) => {
       const existingTransaction = await InventoryTransaction.findOne({
@@ -107,24 +126,41 @@ export class DistributionService {
         throw new BadRequestError('Some items not found or inactive');
       }
 
-      const volunteerStock = await stockService.getVolunteerStock(volunteerId);
-      const stockMap = new Map(volunteerStock.map(s => [s.itemId.toString(), s.stock]));
+      // Check stock availability
+      if (volunteerId) {
+        // Damage from volunteer stock
+        const volunteerStock = await stockService.getVolunteerStock(volunteerId, undefined, session);
+        const stockMap = new Map(volunteerStock.map(s => [s.itemId.toString(), s.stock]));
 
-      for (const item of data.items) {
-        const available = stockMap.get(item.itemId) || 0;
-        if (available < item.quantity) {
-          throw new BadRequestError(`Insufficient volunteer stock for item ${item.itemId}`);
+        for (const item of data.items) {
+          const available = stockMap.get(item.itemId) || 0;
+          if (available < item.quantity) {
+            const itemName = foundItems.find(i => i._id.toString() === item.itemId)?.name || item.itemId;
+            throw new BadRequestError(`Insufficient volunteer stock for ${itemName}. Available: ${available}, Requested: ${item.quantity}`);
+          }
+        }
+      } else {
+        // Damage from central stock
+        const centralStock = await stockService.getCentralStock();
+        const stockMap = new Map(centralStock.map(s => [s.itemId.toString(), s.stock]));
+
+        for (const item of data.items) {
+          const available = stockMap.get(item.itemId) || 0;
+          if (available < item.quantity) {
+            const itemName = foundItems.find(i => i._id.toString() === item.itemId)?.name || item.itemId;
+            throw new BadRequestError(`Insufficient central stock for ${itemName}. Available: ${available}, Requested: ${item.quantity}`);
+          }
         }
       }
 
       const transactions = data.items.map(item => ({
         itemId: new mongoose.Types.ObjectId(item.itemId),
-        type: TransactionType.DAMAGE,
+        type: volunteerId ? TransactionType.DAMAGE : TransactionType.CENTRAL_DAMAGE,
         direction: TransactionDirection.OUT,
         quantity: item.quantity,
         referenceType: 'DamageReport',
         referenceId: data.requestId,
-        performedBy: new mongoose.Types.ObjectId(volunteerId)
+        performedBy: volunteerId ? new mongoose.Types.ObjectId(volunteerId) : new mongoose.Types.ObjectId(performedBy)
       }));
 
       await InventoryTransaction.insertMany(transactions, { session });

@@ -54,13 +54,36 @@ export class StockService {
                 0
               ]
             }
+          },
+          totalCentralDistribution: {
+            $sum: {
+              $cond: [
+                { $eq: ['$type', TransactionType.CENTRAL_DISTRIBUTION] },
+                '$quantity',
+                0
+              ]
+            }
+          },
+          totalCentralDamage: {
+            $sum: {
+              $cond: [
+                { $eq: ['$type', TransactionType.CENTRAL_DAMAGE] },
+                '$quantity',
+                0
+              ]
+            }
           }
         }
       },
       {
         $project: {
           itemId: '$_id',
-          stock: { $subtract: [{ $add: ['$totalStockIn', '$totalReturned'] }, '$totalIssued'] }
+          stock: { 
+            $subtract: [
+              { $add: ['$totalStockIn', '$totalReturned'] }, 
+              { $add: ['$totalIssued', '$totalCentralDistribution', '$totalCentralDamage'] }
+            ] 
+          }
         }
       }
     ]);
@@ -74,14 +97,14 @@ export class StockService {
     }));
   }
 
-  async getVolunteerStock(volunteerId: string, itemId?: string) {
+  async getVolunteerStock(volunteerId: string, itemId?: string, session?: any) {
     const match: any = {};
     
     if (itemId) {
       match.itemId = new mongoose.Types.ObjectId(itemId);
     }
 
-    const result = await InventoryTransaction.aggregate([
+    const pipeline: any[] = [
       { $match: match },
       {
         $group: {
@@ -145,15 +168,18 @@ export class StockService {
           itemId: '$_id',
           stock: { $subtract: ['$totalReceived', { $add: ['$totalDistributed', '$totalDamaged', '$totalReturned'] }] }
         }
-      },
-      {
-        $match: {
-          stock: { $gt: 0 }
-        }
       }
-    ]);
+    ];
 
-    const items = await Item.find({ _id: { $in: result.map(r => r.itemId) } });
+    if (!session) {
+      pipeline.push({ $match: { stock: { $gt: 0 } } });
+    }
+
+    const aggregation = InventoryTransaction.aggregate(pipeline);
+    const result = session ? await aggregation.session(session) : await aggregation;
+
+    const itemQuery = Item.find({ _id: { $in: result.map(r => r.itemId) } });
+    const items = session ? await itemQuery.session(session) : await itemQuery;
     
     return result.map(r => ({
       itemId: r.itemId,
@@ -279,7 +305,7 @@ export class StockService {
         throw new BadRequestError('Some items not found or inactive');
       }
 
-      const volunteerStock = await this.getVolunteerStock(volunteerId);
+      const volunteerStock = await this.getVolunteerStock(volunteerId, undefined, session);
       const stockMap = new Map(volunteerStock.map(s => [s.itemId.toString(), s.stock]));
 
       for (const item of items) {

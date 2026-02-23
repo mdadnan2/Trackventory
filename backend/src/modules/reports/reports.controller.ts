@@ -50,4 +50,15 @@ export class ReportsController {
       next(error);
     }
   }
+
+  async getDashboardMetrics(req: UserRequest, res: Response, next: NextFunction) {
+    try {
+      const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
+      const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
+      const metrics = await reportsService.getDashboardMetrics(startDate, endDate);
+      sendSuccess(res, metrics);
+    } catch (error) {
+      next(error);
+    }
+  }
 }

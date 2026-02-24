@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { reportsAPI } from '@/services/api';
 
-type FilterType = 'week' | 'month' | '3months' | '6months' | 'year';
+type FilterType = 'week' | 'month' | '3months' | '6months';
 
 interface DashboardMetrics {
   inStock: {
@@ -43,17 +43,15 @@ export default function DashboardFilterCards() {
         startDate.setDate(now.getDate() - 7);
         break;
       case 'month':
-        startDate.setMonth(now.getMonth() - 1);
+        startDate.setDate(1);
         break;
       case '3months':
-        startDate.setMonth(now.getMonth() - 3);
+        startDate.setDate(1);
+        startDate.setMonth(now.getMonth() - 2);
         break;
       case '6months':
-        startDate.setMonth(now.getMonth() - 6);
-        break;
-      case 'year':
-        startDate.setMonth(0);
         startDate.setDate(1);
+        startDate.setMonth(now.getMonth() - 5);
         break;
     }
 
@@ -96,7 +94,6 @@ export default function DashboardFilterCards() {
             <option value="month">This Month</option>
             <option value="3months">Last 3 Months</option>
             <option value="6months">Last 6 Months</option>
-            <option value="year">This Year</option>
           </select>
         </motion.div>
 

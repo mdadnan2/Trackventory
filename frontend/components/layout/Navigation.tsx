@@ -29,6 +29,9 @@ export default function Navigation() {
                   <Link href="/dashboard/items" className={`px-3 py-2 rounded ${isActive('/dashboard/items')}`}>
                     Items
                   </Link>
+                  <Link href="/dashboard/packages" className={`px-3 py-2 rounded ${isActive('/dashboard/packages')}`}>
+                    Packages
+                  </Link>
                   <Link href="/dashboard/stock" className={`px-3 py-2 rounded ${isActive('/dashboard/stock')}`}>
                     Stock
                   </Link>

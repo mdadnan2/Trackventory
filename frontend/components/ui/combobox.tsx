@@ -3,24 +3,30 @@
 import { useState, useRef, useEffect } from 'react';
 import { ChevronDown, Check } from 'lucide-react';
 
+interface ComboboxOption {
+  value: string;
+  label: string;
+}
+
 interface ComboboxProps {
-  items: readonly string[] | string[];
+  options: ComboboxOption[];
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
   disabled?: boolean;
+  className?: string;
 }
 
-export function Combobox({ items, value, onChange, placeholder = 'Select...', disabled = false }: ComboboxProps) {
+export function Combobox({ options, value, onChange, placeholder = 'Select...', disabled = false, className = '' }: ComboboxProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const filteredItems = items.filter(item =>
-    item.toLowerCase().includes(search.toLowerCase())
+  const filteredOptions = options.filter(option =>
+    option.label.toLowerCase().includes(search.toLowerCase())
   );
 
-  const selectedItem = items.find(item => item === value);
+  const selectedOption = options.find(option => option.value === value);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -40,20 +46,20 @@ export function Combobox({ items, value, onChange, placeholder = 'Select...', di
         type="button"
         onClick={() => !disabled && setOpen(!open)}
         disabled={disabled}
-        className="input w-full flex items-center justify-between text-left disabled:opacity-50 disabled:cursor-not-allowed"
+        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent flex items-center justify-between text-left disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
       >
-        <span className={selectedItem ? 'text-slate-900' : 'text-slate-400'}>
-          {selectedItem || placeholder}
+        <span className={selectedOption ? 'text-gray-900' : 'text-gray-400'}>
+          {selectedOption?.label || placeholder}
         </span>
-        <ChevronDown size={16} className={`text-slate-400 transition-transform ${open ? 'rotate-180' : ''}`} />
+        <ChevronDown size={16} className={`text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
 
       {open && (
-        <div className="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-60 overflow-hidden">
-          <div className="p-2 border-b border-slate-200">
+        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-hidden">
+          <div className="p-2 border-b border-gray-200">
             <input
               type="text"
-              className="w-full px-3 py-2 text-sm border border-slate-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Search..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -61,22 +67,22 @@ export function Combobox({ items, value, onChange, placeholder = 'Select...', di
             />
           </div>
           <div className="overflow-y-auto max-h-48">
-            {filteredItems.length === 0 ? (
-              <div className="px-3 py-2 text-sm text-slate-500 text-center">No items found.</div>
+            {filteredOptions.length === 0 ? (
+              <div className="px-3 py-2 text-sm text-gray-500 text-center">No items found.</div>
             ) : (
-              filteredItems.map((item) => (
+              filteredOptions.map((option) => (
                 <button
-                  key={item}
+                  key={option.value}
                   type="button"
                   onClick={() => {
-                    onChange(item);
+                    onChange(option.value);
                     setOpen(false);
                     setSearch('');
                   }}
-                  className="w-full px-3 py-2 text-sm text-left hover:bg-slate-50 flex items-center justify-between"
+                  className="w-full px-3 py-2 text-sm text-left hover:bg-gray-50 flex items-center justify-between"
                 >
-                  <span>{item}</span>
-                  {item === value && <Check size={16} className="text-blue-600" />}
+                  <span>{option.label}</span>
+                  {option.value === value && <Check size={16} className="text-blue-600" />}
                 </button>
               ))
             )}

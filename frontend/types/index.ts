@@ -21,9 +21,28 @@ export interface Item {
 export interface Package {
   _id: string;
   name: string;
-  items: Array<{ itemId: string; quantity: number }>;
+  description?: string;
+  items: Array<{ 
+    itemId: string | Item; 
+    quantity: number;
+    _id?: string;
+  }>;
   isActive: boolean;
+  createdBy: string;
   createdAt: string;
+  updatedAt: string;
+}
+
+export interface PackageStockSummary {
+  packageId: string;
+  packageName: string;
+  maxPackages: number;
+  items: Array<{
+    itemId: string;
+    itemName: string;
+    quantityPerPackage: number;
+    possiblePackages: number;
+  }>;
 }
 
 export interface City {

@@ -14,6 +14,7 @@ import FormField from '@/components/ui/form-field';
 import Button from '@/components/ui/button';
 import { ToastContainer } from '@/components/ui/toast';
 import TransferStockModal from '@/components/ui/transfer-stock-modal';
+import { Combobox } from '@/components/ui/combobox';
 import { motion } from 'framer-motion';
 import DataTable from '@/components/ui/data-table';
 import { Pagination } from '@/components/ui/pagination';
@@ -295,36 +296,33 @@ export default function StockPage() {
                     <p className="text-sm text-slate-500 mt-2">Contact admin to get items assigned</p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-3">
                     {myStock.map((stock, index) => {
                       const status = getStockStatus(stock.stock);
                       return (
                         <motion.div
                           key={stock.itemId}
-                          initial={{ opacity: 0, scale: 0.95 }}
-                          animate={{ opacity: 1, scale: 1 }}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
                           transition={{ delay: 0.5 + index * 0.05 }}
-                          className={`relative p-5 rounded-xl border-2 ${status.color} hover:shadow-lg transition-all`}
+                          className={`flex items-center justify-between p-4 rounded-lg border-2 ${status.color} hover:shadow-md transition-all`}
                         >
-                          <div className="flex items-start justify-between">
+                          <div className="flex items-center gap-4 flex-1">
+                            <span className="text-3xl">{status.icon}</span>
                             <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-2">
-                                <span className="text-2xl">{status.icon}</span>
-                                <h3 className="text-lg font-bold text-slate-900">{stock.item.name}</h3>
-                              </div>
-                              <p className="text-sm text-slate-600 mb-3">{stock.item.category}</p>
-                              <div className="flex items-center gap-2">
-                                <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${status.color}`}>
+                              <h3 className="text-lg font-bold text-slate-900">{stock.item.name}</h3>
+                              <div className="flex items-center gap-3 mt-1">
+                                <span className="text-sm text-slate-600">{stock.item.category}</span>
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${status.color}`}>
                                   {status.label}
                                 </span>
                               </div>
                             </div>
-                            <div className="text-right">
-                              <div className="text-4xl font-bold text-slate-900">{stock.stock}</div>
-                              <div className="text-sm text-slate-600 mt-1">{stock.item.unit}</div>
-                            </div>
                           </div>
-                          <div className={`absolute bottom-0 left-0 right-0 h-1 ${status.badge} rounded-b-xl`}></div>
+                          <div className="text-right">
+                            <div className="text-3xl font-bold text-slate-900">{stock.stock}</div>
+                            <div className="text-sm text-slate-600">{stock.item.unit}</div>
+                          </div>
                         </motion.div>
                       );
                     })}
@@ -379,23 +377,16 @@ export default function StockPage() {
                 {returnItems.map((item, index) => (
                   <div key={index} className="flex gap-4">
                     <FormField label="Item" required fullWidth>
-                      <select
-                        className="input"
+                      <Combobox
+                        options={myStock.map((s) => ({ value: s.itemId, label: `${s.item.name} (Available: ${s.stock} ${s.item.unit})` }))}
                         value={item.itemId}
-                        onChange={(e) => {
+                        onChange={(value) => {
                           const updated = [...returnItems];
-                          updated[index].itemId = e.target.value;
+                          updated[index].itemId = value;
                           setReturnItems(updated);
                         }}
-                        required
-                      >
-                        <option value="">Select Item</option>
-                        {myStock.map((s) => (
-                          <option key={s.itemId} value={s.itemId}>
-                            {s.item.name} (Available: {s.stock} {s.item.unit})
-                          </option>
-                        ))}
-                      </select>
+                        placeholder="Select Item"
+                      />
                     </FormField>
                     <FormField label="Quantity" required>
                       <input
@@ -505,17 +496,12 @@ export default function StockPage() {
                 {stockItems.map((item, index) => (
                   <div key={index} className="md:col-span-2 flex gap-4">
                     <FormField label="Item" required fullWidth>
-                      <select
-                        className="input"
+                      <Combobox
+                        options={items?.map((i) => ({ value: i._id, label: `${i.name} (${i.unit})` })) || []}
                         value={item.itemId}
-                        onChange={(e) => updateStockItem(index, 'itemId', e.target.value)}
-                        required
-                      >
-                        <option value="">Select Item</option>
-                        {items?.map((i) => (
-                          <option key={i._id} value={i._id}>{i.name} ({i.unit})</option>
-                        ))}
-                      </select>
+                        onChange={(value) => updateStockItem(index, 'itemId', value)}
+                        placeholder="Select Item"
+                      />
                     </FormField>
                     <FormField label="Quantity" required>
                       <input
@@ -557,33 +543,23 @@ export default function StockPage() {
                 description="Transfer items from central to field volunteer"
               >
                 <FormField label="Select Volunteer" required fullWidth>
-                  <select
-                    className="input"
+                  <Combobox
+                    options={volunteers?.map((v) => ({ value: v._id, label: v.name })) || []}
                     value={selectedVolunteer}
-                    onChange={(e) => setSelectedVolunteer(e.target.value)}
-                    required
-                  >
-                    <option value="">Select Volunteer</option>
-                    {volunteers?.map((v) => (
-                      <option key={v._id} value={v._id}>{v.name}</option>
-                    ))}
-                  </select>
+                    onChange={(value) => setSelectedVolunteer(value)}
+                    placeholder="Select Volunteer"
+                  />
                 </FormField>
 
                 {stockItems.map((item, index) => (
                   <div key={index} className="md:col-span-2 flex gap-4">
                     <FormField label="Item" required fullWidth>
-                      <select
-                        className="input"
+                      <Combobox
+                        options={items?.map((i) => ({ value: i._id, label: `${i.name} (${i.unit})` })) || []}
                         value={item.itemId}
-                        onChange={(e) => updateStockItem(index, 'itemId', e.target.value)}
-                        required
-                      >
-                        <option value="">Select Item</option>
-                        {items?.map((i) => (
-                          <option key={i._id} value={i._id}>{i.name} ({i.unit})</option>
-                        ))}
-                      </select>
+                        onChange={(value) => updateStockItem(index, 'itemId', value)}
+                        placeholder="Select Item"
+                      />
                     </FormField>
                     <FormField label="Quantity" required>
                       <input

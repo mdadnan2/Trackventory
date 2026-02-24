@@ -48,7 +48,12 @@ export const packagesAPI = {
   create: (data: any) => api.post('/packages', data),
   getAll: (page = 1, limit = 50) => api.get(`/packages?page=${page}&limit=${limit}`),
   getById: (id: string) => api.get(`/packages/${id}`),
-  update: (id: string, data: any) => api.patch(`/packages/${id}`, data)
+  update: (id: string, data: any) => api.patch(`/packages/${id}`, data),
+  delete: (id: string) => api.delete(`/packages/${id}`),
+  assign: (data: any) => api.post('/packages/assign', data),
+  distribute: (data: any) => api.post('/packages/distribute', data),
+  getStockSummary: (id: string, type: string, volunteerId?: string) => 
+    api.get(`/packages/${id}/stock-summary`, { params: { type, volunteerId } })
 };
 
 export const citiesAPI = {

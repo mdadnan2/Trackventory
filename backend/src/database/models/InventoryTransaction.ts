@@ -24,6 +24,8 @@ export interface IInventoryTransaction extends Document {
   quantity: number;
   referenceType?: string;
   referenceId?: mongoose.Types.ObjectId | string;
+  packageAssignmentId?: mongoose.Types.ObjectId;
+  packageDistributionId?: mongoose.Types.ObjectId;
   performedBy: mongoose.Types.ObjectId;
   createdAt: Date;
 }
@@ -35,6 +37,8 @@ const inventoryTransactionSchema = new Schema<IInventoryTransaction>({
   quantity: { type: Number, required: true, min: 1 },
   referenceType: { type: String },
   referenceId: { type: Schema.Types.Mixed },
+  packageAssignmentId: { type: Schema.Types.ObjectId, ref: 'PackageAssignment' },
+  packageDistributionId: { type: Schema.Types.ObjectId, ref: 'PackageDistribution' },
   performedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   createdAt: { type: Date, default: Date.now }
 });

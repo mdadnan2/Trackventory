@@ -3,6 +3,7 @@ import { Distribution } from '../../database/models/Distribution';
 import { InventoryTransaction, TransactionType, TransactionDirection } from '../../database/models/InventoryTransaction';
 import { Campaign } from '../../database/models/Campaign';
 import { Item } from '../../database/models/Item';
+import { Package } from '../../database/models/Package';
 import { BadRequestError, NotFoundError, ConflictError } from '../../utils/errors';
 import { withTransaction } from '../../utils/transaction';
 import { StockService } from '../stock/stock.service';
@@ -20,6 +21,7 @@ export class DistributionService {
       area: string;
       campaignId?: string;
       items: Array<{ itemId: string; quantity: number }>;
+      packages: Array<{ packageId: string; quantity: number }>;
       requestId: string;
     },
     performedBy: string
@@ -37,36 +39,68 @@ export class DistributionService {
         }
       }
 
-      const itemIds = data.items.map(i => new mongoose.Types.ObjectId(i.itemId));
-      const foundItems = await Item.find({ _id: { $in: itemIds }, isActive: true }).session(session);
+      // Expand packages into items
+      const expandedItems = [...data.items];
+      const stockRequirements = new Map<string, number>();
       
-      if (foundItems.length !== itemIds.length) {
+      // Add individual items to requirements
+      data.items.forEach(item => {
+        stockRequirements.set(item.itemId, (stockRequirements.get(item.itemId) || 0) + item.quantity);
+      });
+      
+      // Process packages
+      if (data.packages.length > 0) {
+        const packageIds = data.packages.map(p => new mongoose.Types.ObjectId(p.packageId));
+        const foundPackages = await Package.find({ _id: { $in: packageIds }, isActive: true }).session(session);
+        
+        if (foundPackages.length !== packageIds.length) {
+          throw new BadRequestError('Some packages not found or inactive');
+        }
+        
+        // Expand packages into items and add to requirements
+        for (const pkgData of data.packages) {
+          const pkg = foundPackages.find(p => p._id.toString() === pkgData.packageId);
+          if (!pkg) continue;
+          
+          pkg.items.forEach(pkgItem => {
+            const itemId = pkgItem.itemId.toString();
+            const totalQty = pkgItem.quantity * pkgData.quantity;
+            
+            stockRequirements.set(itemId, (stockRequirements.get(itemId) || 0) + totalQty);
+            expandedItems.push({ itemId, quantity: totalQty });
+          });
+        }
+      }
+
+      // Validate all items exist
+      const allItemIds = Array.from(stockRequirements.keys()).map(id => new mongoose.Types.ObjectId(id));
+      const foundItems = await Item.find({ _id: { $in: allItemIds }, isActive: true }).session(session);
+      
+      if (foundItems.length !== allItemIds.length) {
         throw new BadRequestError('Some items not found or inactive');
       }
 
       // Check stock availability
       if (volunteerId) {
-        // Distribution from volunteer stock
         const volunteerStock = await stockService.getVolunteerStock(volunteerId, undefined, session);
         const stockMap = new Map(volunteerStock.map(s => [s.itemId.toString(), s.stock]));
 
-        for (const item of data.items) {
-          const available = stockMap.get(item.itemId) || 0;
-          if (available < item.quantity) {
-            const itemName = foundItems.find(i => i._id.toString() === item.itemId)?.name || item.itemId;
-            throw new BadRequestError(`Insufficient volunteer stock for ${itemName}. Available: ${available}, Requested: ${item.quantity}`);
+        for (const [itemId, required] of stockRequirements) {
+          const available = stockMap.get(itemId) || 0;
+          if (available < required) {
+            const itemName = foundItems.find(i => i._id.toString() === itemId)?.name || itemId;
+            throw new BadRequestError(`Insufficient volunteer stock for ${itemName}. Available: ${available}, Required: ${required}`);
           }
         }
       } else {
-        // Distribution from central stock
         const centralStock = await stockService.getCentralStock();
         const stockMap = new Map(centralStock.map(s => [s.itemId.toString(), s.stock]));
 
-        for (const item of data.items) {
-          const available = stockMap.get(item.itemId) || 0;
-          if (available < item.quantity) {
-            const itemName = foundItems.find(i => i._id.toString() === item.itemId)?.name || item.itemId;
-            throw new BadRequestError(`Insufficient central stock for ${itemName}. Available: ${available}, Requested: ${item.quantity}`);
+        for (const [itemId, required] of stockRequirements) {
+          const available = stockMap.get(itemId) || 0;
+          if (available < required) {
+            const itemName = foundItems.find(i => i._id.toString() === itemId)?.name || itemId;
+            throw new BadRequestError(`Insufficient central stock for ${itemName}. Available: ${available}, Required: ${required}`);
           }
         }
       }
@@ -78,21 +112,22 @@ export class DistributionService {
         pinCode: data.pinCode,
         area: data.area,
         campaignId: data.campaignId ? new mongoose.Types.ObjectId(data.campaignId) : undefined,
-        items: data.items.map(i => ({
+        items: expandedItems.map(i => ({
           itemId: new mongoose.Types.ObjectId(i.itemId),
           quantity: i.quantity
         })),
         requestId: data.requestId
       }], { session });
 
-      const transactions = data.items.map(item => ({
+      const transactions = expandedItems.map(item => ({
         itemId: new mongoose.Types.ObjectId(item.itemId),
         type: volunteerId ? TransactionType.DISTRIBUTION : TransactionType.CENTRAL_DISTRIBUTION,
         direction: TransactionDirection.OUT,
         quantity: item.quantity,
         referenceType: 'Distribution',
         referenceId: distribution[0]._id,
-        performedBy: volunteerId ? new mongoose.Types.ObjectId(volunteerId) : new mongoose.Types.ObjectId(performedBy)
+        performedBy: volunteerId ? new mongoose.Types.ObjectId(volunteerId) : new mongoose.Types.ObjectId(performedBy),
+        metadata: data.packages.length > 0 ? { hasPackages: true } : undefined
       }));
 
       await InventoryTransaction.insertMany(transactions, { session });
@@ -178,21 +213,49 @@ export class DistributionService {
     if (filters?.city) query.city = filters.city;
     if (filters?.campaignId) query.campaignId = new mongoose.Types.ObjectId(filters.campaignId);
 
-    console.log('Distribution Query:', query);
-
-    const [distributions, total] = await Promise.all([
+    const [distributions, packageDistributions, totalDist, totalPkg] = await Promise.all([
       Distribution.find(query)
         .populate('volunteerId', 'name email')
         .populate('campaignId', 'name')
         .populate('items.itemId', 'name unit')
-        .skip(skip)
-        .limit(l)
         .sort({ createdAt: -1 }),
-      Distribution.countDocuments(query)
+      filters?.volunteerId ? 
+        mongoose.model('PackageDistribution').find({ volunteerId: query.volunteerId })
+          .populate('volunteerId', 'name email')
+          .populate('campaignId', 'name')
+          .populate('location.cityId', 'name')
+          .populate({
+            path: 'packageId',
+            populate: { path: 'items.itemId', select: 'name unit' }
+          })
+          .sort({ createdAt: -1 }) : [],
+      Distribution.countDocuments(query),
+      filters?.volunteerId ? mongoose.model('PackageDistribution').countDocuments({ volunteerId: query.volunteerId }) : 0
     ]);
 
-    console.log('Found distributions:', distributions.length, 'Total:', total);
+    const pkgDists = (packageDistributions as any[]).map(pd => ({
+      _id: pd._id,
+      volunteerId: pd.volunteerId,
+      campaignId: pd.campaignId,
+      createdAt: pd.createdAt,
+      city: pd.location?.cityId?.name || '',
+      area: pd.location?.address || '',
+      pinCode: '',
+      items: pd.packageId?.items?.map((item: any) => ({
+        itemId: item.itemId,
+        quantity: item.quantity * pd.quantity
+      })) || [],
+      isPackage: true,
+      packageName: pd.packageId?.name
+    }));
 
-    return createPaginatedResponse(distributions, total, p, l);
+    const combined = [...distributions, ...pkgDists].sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+
+    const total = totalDist + totalPkg;
+    const paginated = combined.slice(skip, skip + l);
+
+    return createPaginatedResponse(paginated, total, p, l);
   }
 }

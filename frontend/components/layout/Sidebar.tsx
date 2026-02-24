@@ -14,7 +14,8 @@ import {
   PackageCheck,
   PackageSearch,
   Megaphone,
-  Box
+  Box,
+  History
 } from 'lucide-react';
 import { User } from '@/types';
 
@@ -25,11 +26,12 @@ interface SidebarProps {
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['ADMIN', 'VOLUNTEER'] },
   { href: '/dashboard/items', label: 'Items', icon: Package, roles: ['ADMIN'] },
-  { href: '/dashboard/packages', label: 'Packages', icon: Box, roles: ['ADMIN'] },
+  { href: '/dashboard/packages', label: 'Packages', icon: Box, roles: ['ADMIN', 'VOLUNTEER'] },
   { href: '/dashboard/stock', label: 'Stock', icon: Warehouse, roles: ['ADMIN', 'VOLUNTEER'] },
   { href: '/dashboard/users', label: 'Users', icon: Users, roles: ['ADMIN'] },
   { href: '/dashboard/campaigns', label: 'Campaigns', icon: Megaphone, roles: ['ADMIN'] },
   { href: '/dashboard/distribution', label: 'Distribution', icon: TrendingUp, roles: ['ADMIN', 'VOLUNTEER'] },
+  { href: '/dashboard/history', label: 'History', icon: History, roles: ['VOLUNTEER'] },
   { href: '/dashboard/reports', label: 'Reports', icon: FileText, roles: ['ADMIN'] },
 ];
 

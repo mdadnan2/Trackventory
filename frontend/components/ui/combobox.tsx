@@ -6,6 +6,7 @@ import { ChevronDown, Check } from 'lucide-react';
 interface ComboboxOption {
   value: string;
   label: string;
+  disabled?: boolean;
 }
 
 interface ComboboxProps {
@@ -22,11 +23,11 @@ export function Combobox({ options, value, onChange, placeholder = 'Select...', 
   const [search, setSearch] = useState('');
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const filteredOptions = options.filter(option =>
+  const filteredOptions = (options || []).filter(option =>
     option.label.toLowerCase().includes(search.toLowerCase())
   );
 
-  const selectedOption = options.find(option => option.value === value);
+  const selectedOption = (options || []).find(option => option.value === value);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -75,11 +76,18 @@ export function Combobox({ options, value, onChange, placeholder = 'Select...', 
                   key={option.value}
                   type="button"
                   onClick={() => {
-                    onChange(option.value);
-                    setOpen(false);
-                    setSearch('');
+                    if (!option.disabled) {
+                      onChange(option.value);
+                      setOpen(false);
+                      setSearch('');
+                    }
                   }}
-                  className="w-full px-3 py-2 text-sm text-left hover:bg-gray-50 flex items-center justify-between"
+                  disabled={option.disabled}
+                  className={`w-full px-3 py-2 text-sm text-left flex items-center justify-between ${
+                    option.disabled 
+                      ? 'opacity-50 cursor-not-allowed bg-gray-50' 
+                      : 'hover:bg-gray-50 cursor-pointer'
+                  }`}
                 >
                   <span>{option.label}</span>
                   {option.value === value && <Check size={16} className="text-blue-600" />}

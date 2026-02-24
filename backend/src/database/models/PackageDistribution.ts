@@ -6,8 +6,8 @@ export interface IPackageDistribution extends Document {
   quantity: number;
   distributionDate: Date;
   location: {
-    cityId: mongoose.Types.ObjectId;
-    areaId: mongoose.Types.ObjectId;
+    cityId?: mongoose.Types.ObjectId;
+    areaId?: mongoose.Types.ObjectId;
     address?: string;
     coordinates?: { lat: number; lng: number };
   };
@@ -29,8 +29,8 @@ const packageDistributionSchema = new Schema<IPackageDistribution>({
   quantity: { type: Number, required: true, min: 1 },
   distributionDate: { type: Date, required: true },
   location: {
-    cityId: { type: Schema.Types.ObjectId, ref: 'City', required: true },
-    areaId: { type: Schema.Types.ObjectId, required: true },
+    cityId: { type: Schema.Types.ObjectId, ref: 'City', required: false },
+    areaId: { type: Schema.Types.ObjectId, required: false },
     address: { type: String },
     coordinates: {
       lat: { type: Number },

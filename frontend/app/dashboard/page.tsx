@@ -7,8 +7,8 @@ import { useEffect, useState } from 'react';
 import { stockAPI, reportsAPI, distributionAPI } from '@/services/api';
 import { motion } from 'framer-motion';
 import { Warehouse, Users, TrendingUp, AlertTriangle, Package, Clock, CheckCircle, MapPin, Calendar, AlertCircle } from 'lucide-react';
-import StatCard from '@/components/dashboard/stat-card';
-import Charts from '@/components/dashboard/charts';
+import StatCard from '@/components/ui/stat-card';
+import Card from '@/components/ui/card';
 import RecentActivity from '@/components/dashboard/recent-activity';
 import DashboardSkeleton from '@/components/ui/loading-skeleton';
 import DashboardFilterCards from '@/components/dashboard/dashboard-filter-cards';
@@ -16,9 +16,8 @@ import DashboardFilterCards from '@/components/dashboard/dashboard-filter-cards'
 export default function DashboardPage() {
   const { user } = useAuth();
   const isMobile = useIsMobile();
-  const [stockSummary, setStockSummary] = useState<any[]>([]);
+  const [dashboardMetrics, setDashboardMetrics] = useState<any>(null);
   const [volunteerStock, setVolunteerStock] = useState<any>(null);
-  const [distributions, setDistributions] = useState<any[]>([]);
   const [myDistributions, setMyDistributions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -29,22 +28,15 @@ export default function DashboardPage() {
   const loadData = async () => {
     try {
       if (user?.role === 'ADMIN') {
-        const [stockRes, distRes] = await Promise.all([
-          reportsAPI.getStockSummary(),
-          reportsAPI.getCampaignDistribution()
-        ]);
-        setStockSummary(stockRes.data.data.data || []);
-        setDistributions(distRes.data.data.data || []);
+        const metricsRes = await reportsAPI.getDashboardMetrics();
+        setDashboardMetrics(metricsRes.data.data);
       } else if (user?.role === 'VOLUNTEER') {
         const [stockRes, distRes] = await Promise.all([
           stockAPI.getVolunteerStock(user._id),
           distributionAPI.getAll({ volunteerId: user._id, page: 1, limit: 50 })
         ]);
-        console.log('Distribution API Response:', distRes.data);
         setVolunteerStock(stockRes.data.data);
-        const distributions = distRes.data.data?.data || [];
-        console.log('Distributions:', distributions);
-        setMyDistributions(distributions);
+        setMyDistributions(distRes.data.data?.data || []);
       }
     } catch (error) {
       console.error('Error loading data:', error);
@@ -54,46 +46,36 @@ export default function DashboardPage() {
   };
 
   const calculateStats = () => {
-    if (!stockSummary.length) return { central: 0, volunteer: 0, distributed: 0, damaged: 0 };
+    if (!dashboardMetrics) return { central: 0, volunteer: 0, distributed: 0, damaged: 0 };
     
-    return stockSummary.reduce((acc, item) => ({
-      central: acc.central + item.centralStock,
-      volunteer: acc.volunteer + item.volunteerStock,
-      distributed: acc.distributed + item.totalDistributed,
-      damaged: acc.damaged + item.totalDamaged,
-    }), { central: 0, volunteer: 0, distributed: 0, damaged: 0 });
+    return {
+      central: dashboardMetrics.inStock?.central || 0,
+      volunteer: dashboardMetrics.inStock?.volunteers || 0,
+      distributed: dashboardMetrics.distributed || 0,
+      damaged: dashboardMetrics.damaged || 0,
+    };
   };
 
   const calculateVolunteerStats = () => {
-    if (!volunteerStock) return { totalItems: 0, totalStock: 0, distributedToday: 0, areasCovered: 0, distributedThisWeek: 0, damagedReported: 0 };
-    
-    const totalItems = volunteerStock.length;
-    const totalStock = volunteerStock.reduce((sum: number, item: any) => sum + item.stock, 0);
+    const totalItems = volunteerStock?.length || 0;
+    const totalStock = volunteerStock?.reduce((sum: number, item: any) => sum + item.stock, 0) || 0;
     
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const distributedToday = myDistributions
       .filter((d: any) => new Date(d.createdAt) >= today)
-      .reduce((sum: number, d: any) => {
-        return sum + (d.items?.reduce((s: number, i: any) => s + i.quantity, 0) || 0);
-      }, 0);
+      .reduce((sum: number, d: any) => sum + (d.items?.reduce((s: number, i: any) => s + i.quantity, 0) || 0), 0);
     
     const weekAgo = new Date();
     weekAgo.setDate(weekAgo.getDate() - 7);
     const distributedThisWeek = myDistributions
       .filter((d: any) => new Date(d.createdAt) >= weekAgo)
-      .reduce((sum: number, d: any) => {
-        return sum + (d.items?.reduce((s: number, i: any) => s + i.quantity, 0) || 0);
-      }, 0);
+      .reduce((sum: number, d: any) => sum + (d.items?.reduce((s: number, i: any) => s + i.quantity, 0) || 0), 0);
     
-    const uniqueAreas = new Set(
-      myDistributions.map((d: any) => `${d.cityId?.name}-${d.area}`)
-    );
+    const uniqueAreas = new Set(myDistributions.map((d: any) => `${d.cityId?.name}-${d.area}`));
     const areasCovered = uniqueAreas.size;
     
-    const damagedReported = 0;
-    
-    return { totalItems, totalStock, distributedToday, areasCovered, distributedThisWeek, damagedReported };
+    return { totalItems, totalStock, distributedToday, areasCovered, distributedThisWeek, damagedReported: 0 };
   };
 
   const getStockStatus = (stock: number) => {
@@ -112,16 +94,6 @@ export default function DashboardPage() {
 
   const stats = calculateStats();
   const volunteerStats = calculateVolunteerStats();
-
-  const itemChartData = Array.isArray(stockSummary) ? stockSummary.slice(0, 5).map(item => ({
-    name: item.item.name,
-    distributed: item.totalDistributed
-  })) : [];
-
-  const distributionTrendData = Array.isArray(distributions) ? distributions.slice(0, 5).map((dist, idx) => ({
-    name: dist.item?.name || `Item ${idx + 1}`,
-    value: dist.totalQuantity
-  })) : [];
 
   if (loading) {
     return <DashboardSkeleton />;
@@ -145,71 +117,22 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 gap-6">
             <RecentActivity />
           </div>
-
-          <Charts itemData={itemChartData} trendData={distributionTrendData} />
         </>
       )}
 
       {user?.role === 'VOLUNTEER' && (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <StatCard
-              title="Total Items"
-              value={volunteerStats.totalItems}
-              description="Items assigned to you"
-              icon={Package}
-              color="bg-gradient-to-br from-blue-500 to-blue-600"
-              index={0}
-            />
-            <StatCard
-              title="Total Stock"
-              value={volunteerStats.totalStock}
-              description="Total quantity available"
-              icon={Warehouse}
-              color="bg-gradient-to-br from-purple-500 to-purple-600"
-              index={1}
-            />
-            <StatCard
-              title="Distributed Today"
-              value={volunteerStats.distributedToday}
-              description="Items distributed today"
-              icon={CheckCircle}
-              color="bg-gradient-to-br from-green-500 to-green-600"
-              index={2}
-            />
-            <StatCard
-              title="Areas Covered"
-              value={volunteerStats.areasCovered}
-              description="Unique locations served"
-              icon={MapPin}
-              color="bg-gradient-to-br from-orange-500 to-orange-600"
-              index={3}
-            />
-            <StatCard
-              title="This Week"
-              value={volunteerStats.distributedThisWeek}
-              description="Items distributed this week"
-              icon={Calendar}
-              color="bg-gradient-to-br from-cyan-500 to-cyan-600"
-              index={4}
-            />
-            <StatCard
-              title="Damaged Reported"
-              value={volunteerStats.damagedReported}
-              description="Items reported as damaged"
-              icon={AlertCircle}
-              color="bg-gradient-to-br from-red-500 to-red-600"
-              index={5}
-            />
+            <StatCard title="Total Items" value={volunteerStats.totalItems} icon={Package} variant="primary" />
+            <StatCard title="Total Stock" value={volunteerStats.totalStock} icon={Warehouse} variant="success" />
+            <StatCard title="Distributed Today" value={volunteerStats.distributedToday} icon={CheckCircle} variant="success" />
+            <StatCard title="Areas Covered" value={volunteerStats.areasCovered} icon={MapPin} variant="warning" />
+            <StatCard title="This Week" value={volunteerStats.distributedThisWeek} icon={Calendar} variant="primary" />
+            <StatCard title="Damaged Reported" value={volunteerStats.damagedReported} icon={AlertCircle} variant="danger" />
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              className="bg-white rounded-2xl border border-slate-200 overflow-hidden"
-            >
+            <Card>
               <div className="p-6 border-b border-slate-200">
                 <div className="flex items-center justify-between">
                   <div>
@@ -253,14 +176,9 @@ export default function DashboardPage() {
                   </div>
                 )}
               </div>
-            </motion.div>
+            </Card>
 
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 }}
-              className="bg-white rounded-2xl border border-slate-200 overflow-hidden"
-            >
+            <Card>
               <div className="p-6 border-b border-slate-200">
                 <div className="flex items-center justify-between">
                   <div>
@@ -307,7 +225,7 @@ export default function DashboardPage() {
                   </div>
                 )}
               </div>
-            </motion.div>
+            </Card>
           </div>
         </>
       )}

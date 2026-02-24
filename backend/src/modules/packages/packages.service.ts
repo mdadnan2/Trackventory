@@ -410,8 +410,8 @@ export class PackagesService {
         quantity: data.quantity,
         distributionDate: new Date(data.distributionDate),
         location: {
-          cityId: new mongoose.Types.ObjectId(data.location.cityId),
-          areaId: new mongoose.Types.ObjectId(data.location.areaId),
+          cityId: mongoose.Types.ObjectId.isValid(data.location.cityId) ? new mongoose.Types.ObjectId(data.location.cityId) : undefined,
+          areaId: mongoose.Types.ObjectId.isValid(data.location.areaId) ? new mongoose.Types.ObjectId(data.location.areaId) : undefined,
           address: data.location.address,
           coordinates: data.location.coordinates
         },

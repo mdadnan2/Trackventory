@@ -10,8 +10,14 @@ export const createDistributionSchema = z.object({
   items: z.array(z.object({
     itemId: z.string(),
     quantity: z.number().min(1)
-  })).min(1),
+  })).default([]),
+  packages: z.array(z.object({
+    packageId: z.string(),
+    quantity: z.number().min(1)
+  })).default([]),
   requestId: z.string()
+}).refine(data => data.items.length > 0 || data.packages.length > 0, {
+  message: 'At least one item or package must be provided'
 });
 
 export const reportDamageSchema = z.object({

@@ -10,6 +10,10 @@
   body {
     @apply h-screen overflow-hidden bg-slate-50 text-slate-900 antialiased;
   }
+
+  * {
+    @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2;
+  }
 }
 
 @layer utilities {

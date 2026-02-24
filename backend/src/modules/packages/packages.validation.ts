@@ -31,8 +31,8 @@ export const distributePackageSchema = z.object({
   quantity: z.number().int().min(1),
   distributionDate: z.string().datetime(),
   location: z.object({
-    cityId: z.string(),
-    areaId: z.string(),
+    cityId: z.string().optional(),
+    areaId: z.string().optional(),
     address: z.string().optional(),
     coordinates: z.object({
       lat: z.number(),

@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { ArrowRightLeft, Plus, Minus } from 'lucide-react';
 import Button from '@/components/ui/button';
 import FormField from '@/components/ui/form-field';
+import { Combobox } from '@/components/ui/combobox';
 import { stockAPI } from '@/services/api';
 import { User, StockItem } from '@/types';
 
@@ -108,21 +109,15 @@ export default function TransferStockModal({
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
           <div className="p-6 space-y-6 overflow-y-auto flex-1">
             <FormField label="Transfer To" required fullWidth>
-              <select
-                className="input"
-                value={toVolunteerId}
-                onChange={(e) => setToVolunteerId(e.target.value)}
-                required
-              >
-                <option value="">Select Volunteer (Total: {volunteers.length})</option>
-                {volunteers
+              <Combobox
+                options={volunteers
                   .filter((v) => v._id !== currentUser._id)
-                  .map((v) => (
-                    <option key={v._id} value={v._id}>
-                      {v.name} - {v.email}
-                    </option>
-                  ))}
-              </select>
+                  .sort((a, b) => a.name.localeCompare(b.name))
+                  .map((v) => ({ value: v._id, label: v.name }))}
+                value={toVolunteerId}
+                onChange={(value) => setToVolunteerId(value)}
+                placeholder="Select Volunteer"
+              />
             </FormField>
 
             <div className="space-y-4">
@@ -130,19 +125,17 @@ export default function TransferStockModal({
               {transferItems.map((item, index) => (
                 <div key={index} className="flex gap-4">
                   <FormField label="Item" required fullWidth>
-                    <select
-                      className="input"
+                    <Combobox
+                      options={myStock
+                        .sort((a, b) => a.item.name.localeCompare(b.item.name))
+                        .map((s) => ({
+                          value: s.itemId,
+                          label: `${s.item.name} (Available: ${s.stock} ${s.item.unit})`
+                        }))}
                       value={item.itemId}
-                      onChange={(e) => updateTransferItem(index, 'itemId', e.target.value)}
-                      required
-                    >
-                      <option value="">Select Item</option>
-                      {myStock.map((s) => (
-                        <option key={s.itemId} value={s.itemId}>
-                          {s.item.name} (Available: {s.stock} {s.item.unit})
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(value) => updateTransferItem(index, 'itemId', value)}
+                      placeholder="Select Item"
+                    />
                   </FormField>
                   <FormField label="Quantity" required>
                     <input

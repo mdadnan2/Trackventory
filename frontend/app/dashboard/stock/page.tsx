@@ -25,7 +25,7 @@ export default function StockPage() {
   const [items, setItems] = useState<Item[]>([]);
   const [volunteers, setVolunteers] = useState<User[]>([]);
   const [myStock, setMyStock] = useState<StockItem[]>([]);
-  const [activeTab, setActiveTab] = useState<'add' | 'assign'>('add');
+  const [activeTab, setActiveTab] = useState<'add' | 'assign' | 'return' | 'transfer'>('add');
   const [stockItems, setStockItems] = useState<Array<{ itemId: string; quantity: number }>>([{ itemId: '', quantity: 0 }]);
   const [selectedVolunteer, setSelectedVolunteer] = useState('');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null);
@@ -90,13 +90,17 @@ export default function StockPage() {
   const loadData = async () => {
     try {
       if (user?.role === 'ADMIN') {
-        const [itemsRes, usersRes] = await Promise.all([
+        const volunteerId = user._id || user.id;
+        const [itemsRes, usersRes, stockRes] = await Promise.all([
           itemsAPI.getAll(1, 100),
-          usersAPI.getAll(1, 100)
+          usersAPI.getAll(1, 100),
+          stockAPI.getVolunteerStock(volunteerId)
         ]);
         setItems(itemsRes.data.data.data || itemsRes.data.data.items || []);
         const allUsers = usersRes.data.data.data || usersRes.data.data.users || [];
         setVolunteers(allUsers.filter((u: User) => u.role === 'VOLUNTEER' || u.role === 'ADMIN'));
+        const stockData = stockRes.data.success ? stockRes.data.data : [];
+        setMyStock(stockData);
       } else if (user?.role === 'VOLUNTEER') {
         const volunteerId = user._id || user.id;
         const [stockRes, usersRes] = await Promise.all([
@@ -175,7 +179,11 @@ export default function StockPage() {
       setShowReturnModal(false);
       setReturnItems([{ itemId: '', quantity: 0 }]);
       setReturnNotes('');
+      setStockItems([{ itemId: '', quantity: 0 }]);
       loadData();
+      if (user?.role === 'ADMIN') {
+        loadStockSummary(pagination.currentPage);
+      }
     } catch (error: any) {
       setToast({ message: error.response?.data?.error || 'Error returning stock', type: 'error' });
     }
@@ -483,6 +491,26 @@ export default function StockPage() {
             >
               Assign to Volunteer
             </button>
+            <button
+              onClick={() => setActiveTab('return')}
+              className={`flex-1 px-4 py-2.5 rounded-lg font-medium transition-all ${
+                activeTab === 'return'
+                  ? 'bg-blue-50 text-blue-600'
+                  : 'text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              Return Stock
+            </button>
+            <button
+              onClick={() => setActiveTab('transfer')}
+              className={`flex-1 px-4 py-2.5 rounded-lg font-medium transition-all ${
+                activeTab === 'transfer'
+                  ? 'bg-blue-50 text-blue-600'
+                  : 'text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              Transfer Stock
+            </button>
           </div>
         </div>
 
@@ -593,8 +621,144 @@ export default function StockPage() {
               </div>
             </form>
           )}
+
+          {activeTab === 'transfer' && (
+            <div className="space-y-6">
+              <FormSection
+                title="Transfer Stock to Another Volunteer"
+                description="Move your assigned items to another volunteer in the field"
+              >
+                {myStock.length === 0 ? (
+                  <div className="md:col-span-2 text-center py-12">
+                    <Package className="w-16 h-16 mx-auto mb-4 text-slate-300" />
+                    <p className="text-slate-600 font-medium">No stock assigned to you</p>
+                    <p className="text-sm text-slate-500 mt-2">You need assigned stock to transfer items</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="md:col-span-2">
+                      <Button
+                        type="button"
+                        variant="primary"
+                        icon={ArrowRightLeft}
+                        onClick={() => setShowTransferModal(true)}
+                        fullWidth
+                      >
+                        Open Transfer Interface
+                      </Button>
+                      <p className="text-sm text-slate-500 mt-3 text-center">
+                        Transfer your stock to other volunteers for field-level resource rebalancing
+                      </p>
+                    </div>
+                  </>
+                )}
+              </FormSection>
+            </div>
+          )}
+
+          {activeTab === 'return' && (
+            <form onSubmit={handleReturnStock} className="space-y-6">
+              <FormSection
+                title="Return Stock to Central Warehouse"
+                description="Return your assigned items back to central inventory"
+              >
+                {myStock.length === 0 ? (
+                  <div className="md:col-span-2 text-center py-12">
+                    <Package className="w-16 h-16 mx-auto mb-4 text-slate-300" />
+                    <p className="text-slate-600 font-medium">No stock assigned to you</p>
+                    <p className="text-sm text-slate-500 mt-2">You need assigned stock to return items</p>
+                  </div>
+                ) : (
+                  <>
+                    {returnItems.map((item, index) => (
+                      <div key={index} className="md:col-span-2 flex gap-4">
+                        <FormField label="Item" required fullWidth>
+                          <Combobox
+                            options={myStock.sort((a, b) => a.item.name.localeCompare(b.item.name)).map((s) => ({ value: s.itemId, label: `${s.item.name} (Available: ${s.stock} ${s.item.unit})` }))}
+                            value={item.itemId}
+                            onChange={(value) => {
+                              const updated = [...returnItems];
+                              updated[index].itemId = value;
+                              setReturnItems(updated);
+                            }}
+                            placeholder="Select Item"
+                          />
+                        </FormField>
+                        <FormField label="Quantity" required>
+                          <input
+                            type="number"
+                            className="input"
+                            value={item.quantity}
+                            onChange={(e) => {
+                              const updated = [...returnItems];
+                              updated[index].quantity = parseInt(e.target.value);
+                              setReturnItems(updated);
+                            }}
+                            min="1"
+                            required
+                          />
+                        </FormField>
+                        {returnItems.length > 1 && (
+                          <div className="flex items-end">
+                            <Button
+                              type="button"
+                              variant="danger"
+                              icon={Minus}
+                              onClick={() => setReturnItems(returnItems.filter((_, i) => i !== index))}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    ))}
+
+                    <FormField label="Notes (Optional)" fullWidth>
+                      <textarea
+                        className="input"
+                        rows={3}
+                        value={returnNotes}
+                        onChange={(e) => setReturnNotes(e.target.value)}
+                        placeholder="Reason for return..."
+                      />
+                    </FormField>
+                  </>
+                )}
+              </FormSection>
+
+              {myStock.length > 0 && (
+                <div className="flex justify-between pt-4">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    icon={Plus}
+                    onClick={() => setReturnItems([...returnItems, { itemId: '', quantity: 0 }])}
+                  >
+                    Add Another Item
+                  </Button>
+                  <Button type="submit" icon={Undo2}>
+                    Return Stock
+                  </Button>
+                </div>
+              )}
+            </form>
+          )}
         </div>
       </ContentCard>
+
+      <TransferStockModal
+        isOpen={showTransferModal}
+        onClose={() => setShowTransferModal(false)}
+        currentUser={user}
+        volunteers={volunteers}
+        myStock={myStock}
+        onSuccess={() => {
+          setToast({ message: 'Stock transferred successfully!', type: 'success' });
+          loadData();
+          if (user?.role === 'ADMIN') {
+            loadStockSummary(pagination.currentPage);
+          }
+        }}
+        onError={(message) => setToast({ message, type: 'error' })}
+      />
 
       <ContentCard>
         <div className="p-6">

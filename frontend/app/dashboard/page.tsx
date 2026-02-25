@@ -12,6 +12,7 @@ import Card from '@/components/ui/card';
 import RecentActivity from '@/components/dashboard/recent-activity';
 import DashboardSkeleton from '@/components/ui/loading-skeleton';
 import DashboardFilterCards from '@/components/dashboard/dashboard-filter-cards';
+import api from '@/services/api';
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -19,6 +20,7 @@ export default function DashboardPage() {
   const [dashboardMetrics, setDashboardMetrics] = useState<any>(null);
   const [volunteerStock, setVolunteerStock] = useState<any>(null);
   const [myDistributions, setMyDistributions] = useState<any[]>([]);
+  const [damagedCount, setDamagedCount] = useState<number>(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -31,12 +33,14 @@ export default function DashboardPage() {
         const metricsRes = await reportsAPI.getDashboardMetrics();
         setDashboardMetrics(metricsRes.data.data);
       } else if (user?.role === 'VOLUNTEER') {
-        const [stockRes, distRes] = await Promise.all([
+        const [stockRes, distRes, damageRes] = await Promise.all([
           stockAPI.getVolunteerStock(user._id),
-          distributionAPI.getAll({ volunteerId: user._id, page: 1, limit: 50 })
+          distributionAPI.getAll({ volunteerId: user._id, page: 1, limit: 50 }),
+          reportsAPI.getVolunteerDamageCount(user._id)
         ]);
         setVolunteerStock(stockRes.data.data);
         setMyDistributions(distRes.data.data?.data || []);
+        setDamagedCount(damageRes.data.data?.damagedCount || 0);
       }
     } catch (error) {
       console.error('Error loading data:', error);
@@ -75,7 +79,7 @@ export default function DashboardPage() {
     const uniqueAreas = new Set(myDistributions.map((d: any) => `${d.cityId?.name}-${d.area}`));
     const areasCovered = uniqueAreas.size;
     
-    return { totalItems, totalStock, distributedToday, areasCovered, distributedThisWeek, damagedReported: 0 };
+    return { totalItems, totalStock, distributedToday, areasCovered, distributedThisWeek, damagedReported: damagedCount };
   };
 
   const getStockStatus = (stock: number) => {

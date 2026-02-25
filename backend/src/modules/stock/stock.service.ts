@@ -248,11 +248,15 @@ export class StockService {
   }
 
   async assignStock(volunteerId: string, items: Array<{ itemId: string; quantity: number }>, performedBy: string) {
+    if (!volunteerId) {
+      throw new BadRequestError('Volunteer ID is required');
+    }
+    
     return withTransaction(async (session) => {
-      const volunteerQuery = User.findOne({ _id: volunteerId, role: UserRole.VOLUNTEER, status: 'ACTIVE' });
+      const volunteerQuery = User.findOne({ _id: volunteerId, role: { $in: [UserRole.VOLUNTEER, UserRole.ADMIN] }, status: 'ACTIVE' });
       const volunteer = session ? await volunteerQuery.session(session) : await volunteerQuery;
       if (!volunteer) {
-        throw new NotFoundError('Volunteer not found or inactive');
+        throw new NotFoundError('User not found or inactive');
       }
 
       const itemIds = items.map(i => new mongoose.Types.ObjectId(i.itemId));
@@ -321,11 +325,15 @@ export class StockService {
   }
 
   async returnStock(volunteerId: string, items: Array<{ itemId: string; quantity: number }>, performedBy: string, notes?: string) {
+    if (!volunteerId) {
+      throw new BadRequestError('Volunteer ID is required');
+    }
+    
     return withTransaction(async (session) => {
-      const volunteerQuery = User.findOne({ _id: volunteerId, role: UserRole.VOLUNTEER, status: 'ACTIVE' });
+      const volunteerQuery = User.findOne({ _id: volunteerId, role: { $in: [UserRole.VOLUNTEER, UserRole.ADMIN] }, status: 'ACTIVE' });
       const volunteer = session ? await volunteerQuery.session(session) : await volunteerQuery;
       if (!volunteer) {
-        throw new NotFoundError('Volunteer not found or inactive');
+        throw new NotFoundError('User not found or inactive');
       }
 
       const itemIds = items.map(i => new mongoose.Types.ObjectId(i.itemId));
@@ -379,6 +387,10 @@ export class StockService {
   }
 
   async transferStock(fromVolunteerId: string, toVolunteerId: string, items: Array<{ itemId: string; quantity: number }>, performedBy: string, notes?: string) {
+    if (!fromVolunteerId || !toVolunteerId) {
+      throw new BadRequestError('Source and target volunteer IDs are required');
+    }
+    
     return withTransaction(async (session) => {
       const fromVolunteerQuery = User.findOne({ _id: fromVolunteerId, status: 'ACTIVE' });
       const fromVolunteer = session ? await fromVolunteerQuery.session(session) : await fromVolunteerQuery;

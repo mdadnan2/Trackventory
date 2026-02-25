@@ -608,4 +608,24 @@ export class ReportsService {
       damaged: totalDamaged
     };
   }
+
+  async getVolunteerDamageCount(volunteerId: string) {
+    const result = await InventoryTransaction.aggregate([
+      {
+        $match: {
+          performedBy: new mongoose.Types.ObjectId(volunteerId),
+          type: TransactionType.DAMAGE,
+          direction: TransactionDirection.OUT
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          totalDamaged: { $sum: '$quantity' }
+        }
+      }
+    ]);
+
+    return result[0]?.totalDamaged || 0;
+  }
 }

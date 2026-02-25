@@ -61,4 +61,14 @@ export class ReportsController {
       next(error);
     }
   }
+
+  async getVolunteerDamageCount(req: UserRequest, res: Response, next: NextFunction) {
+    try {
+      const volunteerId = req.params.volunteerId;
+      const count = await reportsService.getVolunteerDamageCount(volunteerId);
+      sendSuccess(res, { damagedCount: count });
+    } catch (error) {
+      next(error);
+    }
+  }
 }

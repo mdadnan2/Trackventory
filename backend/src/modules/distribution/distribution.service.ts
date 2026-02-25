@@ -26,6 +26,10 @@ export class DistributionService {
     },
     performedBy: string
   ) {
+    if (!volunteerId) {
+      throw new BadRequestError('Volunteer ID is required');
+    }
+    
     return withTransaction(async (session) => {
       const existingDistribution = await Distribution.findOne({ requestId: data.requestId }).session(session);
       if (existingDistribution) {
@@ -144,6 +148,10 @@ export class DistributionService {
     },
     performedBy: string
   ) {
+    if (!volunteerId) {
+      throw new BadRequestError('Volunteer ID is required');
+    }
+    
     return withTransaction(async (session) => {
       const existingTransaction = await InventoryTransaction.findOne({
         type: TransactionType.DAMAGE,

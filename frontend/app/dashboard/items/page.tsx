@@ -119,9 +119,6 @@ export default function ItemsPage() {
       label: 'Status',
       render: (item: Item) => (
         <div className="flex items-center gap-3">
-          <Badge variant={item.isActive ? 'success' : 'default'}>
-            {item.isActive ? 'Active' : 'Inactive'}
-          </Badge>
           <label className="inline-flex items-center cursor-pointer">
             <input
               type="checkbox"
@@ -131,6 +128,9 @@ export default function ItemsPage() {
             />
             <div className="relative w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
           </label>
+          <Badge variant={item.isActive ? 'success' : 'default'}>
+            {item.isActive ? 'Active' : 'Inactive'}
+          </Badge>
         </div>
       )
     }
@@ -138,25 +138,20 @@ export default function ItemsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Inventory Items"
-        description="Manage your inventory catalog and item categories"
-        actions={
-          <Button onClick={() => setShowForm(true)} icon={Plus}>
-            Add Item
-          </Button>
-        }
-      />
-
       <Card padding="none">
         <div className="p-6 border-b border-slate-200">
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
-            <input
-              type="text"
-              placeholder="Search items by name or category..."
-              className="w-full pl-12 pr-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
+          <div className="flex gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+              <input
+                type="text"
+                placeholder="Search items by name or category..."
+                className="w-full pl-12 pr-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+            <Button onClick={() => setShowForm(true)}>
+              Add
+            </Button>
           </div>
         </div>
 

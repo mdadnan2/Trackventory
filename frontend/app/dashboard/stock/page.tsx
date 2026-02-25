@@ -96,7 +96,7 @@ export default function StockPage() {
         ]);
         setItems(itemsRes.data.data.data || itemsRes.data.data.items || []);
         const allUsers = usersRes.data.data.data || usersRes.data.data.users || [];
-        setVolunteers(allUsers.filter((u: User) => u.role === 'VOLUNTEER'));
+        setVolunteers(allUsers.filter((u: User) => u.role === 'VOLUNTEER' || u.role === 'ADMIN'));
       } else if (user?.role === 'VOLUNTEER') {
         const volunteerId = user._id || user.id;
         const [stockRes, usersRes] = await Promise.all([
@@ -108,7 +108,7 @@ export default function StockPage() {
         setMyStock(stockData);
         console.log('After setMyStock called');
         const allUsers = usersRes.data.data.data || usersRes.data.data.users || [];
-        setVolunteers(allUsers.filter((u: User) => u.role === 'VOLUNTEER'));
+        setVolunteers(allUsers.filter((u: User) => u.role === 'VOLUNTEER' || u.role === 'ADMIN'));
       }
     } catch (error) {
       console.error('Error loading data:', error);
@@ -378,7 +378,7 @@ export default function StockPage() {
                   <div key={index} className="flex gap-4">
                     <FormField label="Item" required fullWidth>
                       <Combobox
-                        options={myStock.map((s) => ({ value: s.itemId, label: `${s.item.name} (Available: ${s.stock} ${s.item.unit})` }))}
+                        options={myStock.sort((a, b) => a.item.name.localeCompare(b.item.name)).map((s) => ({ value: s.itemId, label: `${s.item.name} (Available: ${s.stock} ${s.item.unit})` }))}
                         value={item.itemId}
                         onChange={(value) => {
                           const updated = [...returnItems];
@@ -497,7 +497,7 @@ export default function StockPage() {
                   <div key={index} className="md:col-span-2 flex gap-4">
                     <FormField label="Item" required fullWidth>
                       <Combobox
-                        options={items?.map((i) => ({ value: i._id, label: `${i.name} (${i.unit})` })) || []}
+                        options={items?.sort((a, b) => a.name.localeCompare(b.name)).map((i) => ({ value: i._id, label: `${i.name} (${i.unit})` })) || []}
                         value={item.itemId}
                         onChange={(value) => updateStockItem(index, 'itemId', value)}
                         placeholder="Select Item"
@@ -544,7 +544,7 @@ export default function StockPage() {
               >
                 <FormField label="Select Volunteer" required fullWidth>
                   <Combobox
-                    options={volunteers?.map((v) => ({ value: v._id, label: v.name })) || []}
+                    options={volunteers?.sort((a, b) => a.name.localeCompare(b.name)).map((v) => ({ value: v._id, label: `${v.name}${v.role === 'ADMIN' ? ' (Admin)' : ''}` })) || []}
                     value={selectedVolunteer}
                     onChange={(value) => setSelectedVolunteer(value)}
                     placeholder="Select Volunteer"
@@ -555,7 +555,7 @@ export default function StockPage() {
                   <div key={index} className="md:col-span-2 flex gap-4">
                     <FormField label="Item" required fullWidth>
                       <Combobox
-                        options={items?.map((i) => ({ value: i._id, label: `${i.name} (${i.unit})` })) || []}
+                        options={items?.sort((a, b) => a.name.localeCompare(b.name)).map((i) => ({ value: i._id, label: `${i.name} (${i.unit})` })) || []}
                         value={item.itemId}
                         onChange={(value) => updateStockItem(index, 'itemId', value)}
                         placeholder="Select Item"

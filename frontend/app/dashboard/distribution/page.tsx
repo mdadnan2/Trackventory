@@ -71,10 +71,9 @@ export default function DistributionPage() {
       loadVolunteerStock(selectedVolunteer);
     } else if (user?.role === 'VOLUNTEER') {
       setSelectedVolunteer(user._id);
-    } else if (user?.role === 'ADMIN') {
-      loadCentralStock();
+    } else if (user?.role === 'ADMIN' && user._id) {
+      setSelectedVolunteer(user._id);
     }
-    // Reset cart when volunteer changes
     setCart([]);
   }, [selectedVolunteer, user]);
 
@@ -92,7 +91,7 @@ export default function DistributionPage() {
       setCampaigns((campaignsRes.data.data.data || []).filter((c: Campaign) => c.status === 'ACTIVE'));
       
       if (user?.role === 'ADMIN') {
-        setVolunteers((usersRes.data.data.data || []).filter((u: User) => u.role === 'VOLUNTEER'));
+        setVolunteers((usersRes.data.data.data || []).filter((u: User) => u.role === 'VOLUNTEER' || u.role === 'ADMIN'));
       } else if (user) {
         setSelectedVolunteer(user._id);
         loadVolunteerStock(user._id);
@@ -323,9 +322,14 @@ export default function DistributionPage() {
       return;
     }
     
+    if (!selectedVolunteer) {
+      setToast({ message: 'Please select a volunteer', type: 'error' });
+      return;
+    }
+    
     try {
-      const volunteerId = user?.role === 'ADMIN' ? (selectedVolunteer || undefined) : user?._id;
-      const requestId = `${volunteerId || user?._id}-${Date.now()}`;
+      const volunteerId = user?.role === 'ADMIN' ? selectedVolunteer : user?._id;
+      const requestId = `${volunteerId}-${Date.now()}`;
       
       const distributionItems = cart
         .filter(c => c.type === 'item')
@@ -339,23 +343,16 @@ export default function DistributionPage() {
         ...formData, 
         items: distributionItems,
         packages: distributionPackages,
-        requestId 
+        requestId,
+        volunteerId
       };
-      
-      if (volunteerId) {
-        payload.volunteerId = volunteerId;
-      }
       
       await distributionAPI.create(payload);
       setToast({ message: 'Distribution recorded successfully!', type: 'success' });
       setFormData({ state: '', city: '', pinCode: '', area: '', campaignId: '' });
       setCart([]);
       
-      if (volunteerId) {
-        loadVolunteerStock(volunteerId);
-      } else {
-        loadCentralStock();
-      }
+      loadVolunteerStock(volunteerId);
     } catch (error: any) {
       setToast({ message: error.response?.data?.error || 'Error recording distribution', type: 'error' });
     }
@@ -369,28 +366,26 @@ export default function DistributionPage() {
       return;
     }
     
+    if (!selectedVolunteer) {
+      setToast({ message: 'Please select a volunteer', type: 'error' });
+      return;
+    }
+    
     try {
-      const volunteerId = user?.role === 'ADMIN' ? (selectedVolunteer || undefined) : user?._id;
-      const requestId = `damage-${volunteerId || user?._id}-${Date.now()}`;
+      const volunteerId = user?.role === 'ADMIN' ? selectedVolunteer : user?._id;
+      const requestId = `damage-${volunteerId}-${Date.now()}`;
       
       const damageItems = cart
         .filter(c => c.type === 'item')
         .map(c => ({ itemId: c.referenceId, quantity: c.quantity }));
       
-      const payload: any = { items: damageItems, requestId };
-      if (volunteerId) {
-        payload.volunteerId = volunteerId;
-      }
+      const payload: any = { items: damageItems, requestId, volunteerId };
       
       await distributionAPI.reportDamage(payload);
       setToast({ message: 'Damage reported successfully!', type: 'success' });
       setCart([]);
       
-      if (volunteerId) {
-        loadVolunteerStock(volunteerId);
-      } else {
-        loadCentralStock();
-      }
+      loadVolunteerStock(volunteerId);
     } catch (error: any) {
       setToast({ message: error.response?.data?.error || 'Error reporting damage', type: 'error' });
     }
@@ -399,6 +394,7 @@ export default function DistributionPage() {
   const getDropdownOptions = () => {
     const packageOptions = packages
       .filter(pkg => pkg.isActive)
+      .sort((a, b) => a.name.localeCompare(b.name))
       .map(pkg => {
         const maxQty = getMaxPackageQuantity(pkg._id);
         return {
@@ -410,6 +406,7 @@ export default function DistributionPage() {
     
     const itemOptions = items
       .filter(item => item.isActive)
+      .sort((a, b) => a.name.localeCompare(b.name))
       .map(item => {
         const remaining = getRemainingStock(item._id);
         return {
@@ -455,7 +452,7 @@ export default function DistributionPage() {
                     <div className="mb-6">
                       <label className="block text-sm font-medium text-slate-700 mb-2">Volunteer</label>
                       <Combobox
-                        options={[{ value: '', label: 'Central Stock (Admin)' }, ...volunteers.map((v) => ({ value: v._id, label: v.name }))]}
+                        options={volunteers.sort((a, b) => a.name.localeCompare(b.name)).map((v) => ({ value: v._id, label: `${v.name}${v.role === 'ADMIN' ? ' (Admin)' : ''}` }))}
                         value={selectedVolunteer}
                         onChange={(value) => setSelectedVolunteer(value)}
                         placeholder="Select Volunteer"
@@ -619,7 +616,7 @@ export default function DistributionPage() {
                     <div>
                       <label className="block text-sm font-medium text-slate-700 mb-2">Campaign (Optional)</label>
                       <Combobox
-                        options={[{ value: '', label: 'No Campaign' }, ...campaigns.map((c) => ({ value: c._id, label: c.name }))]}
+                        options={[{ value: '', label: 'No Campaign' }, ...campaigns.sort((a, b) => a.name.localeCompare(b.name)).map((c) => ({ value: c._id, label: c.name }))]}
                         value={formData.campaignId}
                         onChange={(value) => setFormData({ ...formData, campaignId: value })}
                         placeholder="Select Campaign"
@@ -641,7 +638,7 @@ export default function DistributionPage() {
                     <div className="mb-6">
                       <label className="block text-sm font-medium text-slate-700 mb-2">Volunteer</label>
                       <Combobox
-                        options={[{ value: '', label: 'Central Stock (Admin)' }, ...volunteers.map((v) => ({ value: v._id, label: v.name }))]}
+                        options={volunteers.sort((a, b) => a.name.localeCompare(b.name)).map((v) => ({ value: v._id, label: `${v.name}${v.role === 'ADMIN' ? ' (Admin)' : ''}` }))}
                         value={selectedVolunteer}
                         onChange={(value) => setSelectedVolunteer(value)}
                         placeholder="Select Volunteer"
@@ -712,7 +709,7 @@ export default function DistributionPage() {
                     <div className="flex gap-2">
                       <div className="flex-1">
                         <Combobox
-                          options={items.filter(item => item.isActive).map(item => {
+                          options={items.filter(item => item.isActive).sort((a, b) => a.name.localeCompare(b.name)).map(item => {
                             const remaining = getRemainingStock(item._id);
                             return {
                               value: `item_${item._id}`,

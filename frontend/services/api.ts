@@ -51,6 +51,7 @@ export const packagesAPI = {
   update: (id: string, data: any) => api.patch(`/packages/${id}`, data),
   delete: (id: string) => api.delete(`/packages/${id}`),
   assign: (data: any) => api.post('/packages/assign', data),
+  selfAssign: (data: any) => api.post('/packages/self-assign', data),
   distribute: (data: any) => api.post('/packages/distribute', data),
   getStockSummary: (id: string, type: string, volunteerId?: string) => 
     api.get(`/packages/${id}/stock-summary`, { params: { type, volunteerId } })
@@ -85,6 +86,10 @@ export const stockAPI = {
   assignStock: (data: any) => {
     console.log('Calling assignStock:', data);
     return api.post('/stock/assign', data);
+  },
+  selfAssignStock: (data: any) => {
+    console.log('Calling selfAssignStock:', data);
+    return api.post('/stock/self-assign', data);
   },
   returnStock: (data: any) => {
     console.log('Calling returnStock:', data);

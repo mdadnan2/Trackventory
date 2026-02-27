@@ -1,6 +1,6 @@
 import { Response, NextFunction } from 'express';
 import { StockService } from './stock.service';
-import { addStockSchema, assignStockSchema, returnStockSchema, transferStockSchema } from './stock.validation';
+import { addStockSchema, assignStockSchema, returnStockSchema, transferStockSchema, selfAssignStockSchema } from './stock.validation';
 import { sendSuccess } from '../../utils/response';
 import { UserRequest } from '../../middleware/attachUser';
 
@@ -64,6 +64,17 @@ export class StockController {
       const data = transferStockSchema.parse(req.body);
       const fromVolunteerId = req.user!.role === 'ADMIN' ? data.fromVolunteerId : req.user!._id.toString();
       const result = await stockService.transferStock(fromVolunteerId, data.toVolunteerId, data.items, req.user!._id.toString(), data.notes);
+      sendSuccess(res, result, 201);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async selfAssignStock(req: UserRequest, res: Response, next: NextFunction) {
+    try {
+      const data = selfAssignStockSchema.parse(req.body);
+      const volunteerId = req.user!._id.toString();
+      const result = await stockService.assignStock(volunteerId, data.items, volunteerId, data.notes);
       sendSuccess(res, result, 201);
     } catch (error) {
       next(error);

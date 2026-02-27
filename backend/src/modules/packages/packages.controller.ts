@@ -1,6 +1,6 @@
 import { Response, NextFunction } from 'express';
 import { PackagesService } from './packages.service';
-import { createPackageSchema, updatePackageSchema, assignPackageSchema, distributePackageSchema } from './packages.validation';
+import { createPackageSchema, updatePackageSchema, assignPackageSchema, distributePackageSchema, selfAssignPackageSchema } from './packages.validation';
 import { sendSuccess } from '../../utils/response';
 import { UserRequest } from '../../middleware/attachUser';
 
@@ -82,6 +82,20 @@ export class PackagesController {
       const location = type ? { type: type as 'central' | 'volunteer', volunteerId: volunteerId as string } : undefined;
       const result = await packagesService.getPackageStockSummary(req.params.id, location);
       sendSuccess(res, result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async selfAssignPackage(req: UserRequest, res: Response, next: NextFunction) {
+    try {
+      const data = selfAssignPackageSchema.parse(req.body);
+      const volunteerId = req.user!._id.toString();
+      const result = await packagesService.assignPackage(
+        { ...data, volunteerId },
+        volunteerId
+      );
+      sendSuccess(res, result, result.duplicate ? 200 : 201);
     } catch (error) {
       next(error);
     }

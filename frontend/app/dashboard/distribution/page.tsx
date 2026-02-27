@@ -21,7 +21,7 @@ type CartItem = {
   type: 'item' | 'package';
   referenceId: string;
   name: string;
-  quantity: number;
+  quantity: number | '';
   items?: Array<{ itemId: string; quantity: number; name: string }>;
 };
 
@@ -136,6 +136,7 @@ export default function DistributionPage() {
   const calculateStockImpact = () => {
     const impact: Record<string, number> = {};
     cart.forEach(entry => {
+      if (typeof entry.quantity !== 'number') return; // Skip empty quantities
       if (entry.type === 'item') {
         impact[entry.referenceId] = (impact[entry.referenceId] || 0) + entry.quantity;
       } else {
@@ -261,7 +262,13 @@ export default function DistributionPage() {
     setCart(cart.filter(item => item.id !== id));
   };
 
-  const updateCartQuantity = (id: string, newQuantity: number) => {
+  const updateCartQuantity = (id: string, newQuantity: number | '') => {
+    if (newQuantity === '') {
+      // Allow empty quantity
+      setCart(cart.map(c => c.id === id ? { ...c, quantity: '' } : c));
+      return;
+    }
+
     if (newQuantity <= 0) {
       removeFromCart(id);
       return;
@@ -274,9 +281,9 @@ export default function DistributionPage() {
     const otherItems = cart.filter(c => c.id !== id);
     const otherImpact: Record<string, number> = {};
     otherItems.forEach(entry => {
-      if (entry.type === 'item') {
+      if (entry.type === 'item' && typeof entry.quantity === 'number') {
         otherImpact[entry.referenceId] = (otherImpact[entry.referenceId] || 0) + entry.quantity;
-      } else {
+      } else if (entry.type === 'package' && typeof entry.quantity === 'number') {
         entry.items?.forEach(pkgItem => {
           otherImpact[pkgItem.itemId] = (otherImpact[pkgItem.itemId] || 0) + (pkgItem.quantity * entry.quantity);
         });
@@ -397,10 +404,11 @@ export default function DistributionPage() {
       .sort((a, b) => a.name.localeCompare(b.name))
       .map(pkg => {
         const maxQty = getMaxPackageQuantity(pkg._id);
+        const inCart = cart.some(c => c.type === 'package' && c.referenceId === pkg._id);
         return {
           value: `package_${pkg._id}`,
           label: `📦 ${pkg.name} (${maxQty} available)`,
-          disabled: maxQty === 0
+          disabled: maxQty === 0 || inCart
         };
       });
     
@@ -409,10 +417,11 @@ export default function DistributionPage() {
       .sort((a, b) => a.name.localeCompare(b.name))
       .map(item => {
         const remaining = getRemainingStock(item._id);
+        const inCart = cart.some(c => c.type === 'item' && c.referenceId === item._id);
         return {
           value: `item_${item._id}`,
           label: `📋 ${item.name} (${remaining} ${item.unit} available)`,
-          disabled: remaining === 0
+          disabled: remaining === 0 || inCart
         };
       });
     
@@ -518,7 +527,15 @@ export default function DistributionPage() {
                                   <input
                                     type="number"
                                     value={item.quantity}
-                                    onChange={(e) => updateCartQuantity(item.id, parseInt(e.target.value) || 0)}
+                                    onChange={(e) => {
+                                      const val = e.target.value;
+                                      if (val === '') {
+                                        updateCartQuantity(item.id, '');
+                                        return;
+                                      }
+                                      const num = parseInt(val);
+                                      if (num > 0) updateCartQuantity(item.id, num);
+                                    }}
                                     className="w-20 px-2.5 py-1 text-sm font-medium border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                     min="1"
                                   />
@@ -679,7 +696,15 @@ export default function DistributionPage() {
                                   <input
                                     type="number"
                                     value={item.quantity}
-                                    onChange={(e) => updateCartQuantity(item.id, parseInt(e.target.value) || 0)}
+                                    onChange={(e) => {
+                                      const val = e.target.value;
+                                      if (val === '') {
+                                        updateCartQuantity(item.id, '');
+                                        return;
+                                      }
+                                      const num = parseInt(val);
+                                      if (num > 0) updateCartQuantity(item.id, num);
+                                    }}
                                     className="w-20 px-2.5 py-1 text-sm font-medium border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
                                     min="1"
                                   />

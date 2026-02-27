@@ -29,7 +29,6 @@ export default function StockPage() {
   const [stockItems, setStockItems] = useState<Array<{ itemId: string; quantity: number }>>([{ itemId: '', quantity: 0 }]);
   const [selectedVolunteer, setSelectedVolunteer] = useState('');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null);
-  const [showReturnModal, setShowReturnModal] = useState(false);
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [returnItems, setReturnItems] = useState<Array<{ itemId: string; quantity: number }>>([{ itemId: '', quantity: 0 }]);
   const [returnNotes, setReturnNotes] = useState('');
@@ -103,9 +102,10 @@ export default function StockPage() {
         setMyStock(stockData);
       } else if (user?.role === 'VOLUNTEER') {
         const volunteerId = user._id || user.id;
-        const [stockRes, usersRes] = await Promise.all([
+        const [stockRes, usersRes, itemsRes] = await Promise.all([
           stockAPI.getVolunteerStock(volunteerId),
-          usersAPI.getAll(1, 100)
+          usersAPI.getAll(1, 100),
+          itemsAPI.getAll(1, 100)
         ]);
         const stockData = stockRes.data.success ? stockRes.data.data : [];
         console.log('About to setMyStock with:', stockData);
@@ -113,6 +113,7 @@ export default function StockPage() {
         console.log('After setMyStock called');
         const allUsers = usersRes.data.data.data || usersRes.data.data.users || [];
         setVolunteers(allUsers.filter((u: User) => u.role === 'VOLUNTEER' || u.role === 'ADMIN'));
+        setItems(itemsRes.data.data.data || itemsRes.data.data.items || []);
       }
     } catch (error) {
       console.error('Error loading data:', error);
@@ -176,7 +177,6 @@ export default function StockPage() {
     try {
       await stockAPI.returnStock({ volunteerId: user?._id, items: returnItems, notes: returnNotes });
       setToast({ message: 'Stock returned successfully!', type: 'success' });
-      setShowReturnModal(false);
       setReturnItems([{ itemId: '', quantity: 0 }]);
       setReturnNotes('');
       setStockItems([{ itemId: '', quantity: 0 }]);
@@ -196,270 +196,303 @@ export default function StockPage() {
       return <MobileStock />;
     }
 
+    const handleRequestStock = async (e: React.FormEvent) => {
+      e.preventDefault();
+      try {
+        await stockAPI.selfAssignStock({ items: stockItems });
+        setToast({ message: 'Stock requested successfully!', type: 'success' });
+        setStockItems([{ itemId: '', quantity: 0 }]);
+        loadData();
+      } catch (error: any) {
+        setToast({ message: error.response?.data?.error || 'Error requesting stock', type: 'error' });
+      }
+    };
+
     return (
       <>
         <ToastContainer toast={toast} onClose={() => setToast(null)} />
-        <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="space-y-6"
-        >
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-            >
-              <ContentCard>
-                <div className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-slate-500">Total Items</p>
-                      <p className="text-3xl font-bold text-slate-900 mt-2">{myStock.length}</p>
-                    </div>
-                    <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                      <Package className="text-blue-600" size={24} />
-                    </div>
-                  </div>
-                </div>
-              </ContentCard>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-            >
-              <ContentCard>
-                <div className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-slate-500">Total Quantity</p>
-                      <p className="text-3xl font-bold text-slate-900 mt-2">{totalStock}</p>
-                    </div>
-                    <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-                      <TrendingUp className="text-green-600" size={24} />
-                    </div>
-                  </div>
-                </div>
-              </ContentCard>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-            >
-              <ContentCard>
-                <div className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-slate-500">Low Stock Items</p>
-                      <p className="text-3xl font-bold text-slate-900 mt-2">{lowStockCount}</p>
-                    </div>
-                    <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
-                      <AlertCircle className="text-orange-600" size={24} />
-                    </div>
-                  </div>
-                </div>
-              </ContentCard>
-            </motion.div>
-          </div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-          >
-            <ContentCard>
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <div>
-                    <h2 className="text-xl font-semibold text-slate-900">Stock Details</h2>
-                    <p className="text-sm text-slate-500 mt-1">Your current inventory status</p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Button
-                      variant="primary"
-                      onClick={() => setShowTransferModal(true)}
-                      disabled={myStock.length === 0}
-                    >
-                      <ArrowRightLeft size={18} className="mr-2" />
-                      Transfer Stock
-                    </Button>
-                    <Button
-                      variant="primary"
-                      onClick={() => setShowReturnModal(true)}
-                      disabled={myStock.length === 0}
-                    >
-                      Return Stock
-                    </Button>
-                  </div>
-                </div>
-
-                {myStock.length === 0 ? (
-                  <div className="text-center py-16">
-                    <Package className="w-20 h-20 mx-auto mb-4 text-slate-300" />
-                    <p className="text-lg font-medium text-slate-600">No stock assigned yet</p>
-                    <p className="text-sm text-slate-500 mt-2">Contact admin to get items assigned</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {myStock.map((stock, index) => {
-                      const status = getStockStatus(stock.stock);
-                      return (
-                        <motion.div
-                          key={stock.itemId}
-                          initial={{ opacity: 0, x: -20 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: 0.5 + index * 0.05 }}
-                          className={`flex items-center justify-between p-4 rounded-lg border-2 ${status.color} hover:shadow-md transition-all`}
-                        >
-                          <div className="flex items-center gap-4 flex-1">
-                            <span className="text-3xl">{status.icon}</span>
-                            <div className="flex-1">
-                              <h3 className="text-lg font-bold text-slate-900">{stock.item.name}</h3>
-                              <div className="flex items-center gap-3 mt-1">
-                                <span className="text-sm text-slate-600">{stock.item.category}</span>
-                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${status.color}`}>
-                                  {status.label}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <div className="text-3xl font-bold text-slate-900">{stock.stock}</div>
-                            <div className="text-sm text-slate-600">{stock.item.unit}</div>
-                          </div>
-                        </motion.div>
-                      );
-                    })}
-                  </div>
-                )}
+        <div className="space-y-6">
+          <ContentCard>
+            <div className="border-b border-slate-200">
+              <div className="flex gap-1 p-2">
+                <button
+                  onClick={() => setActiveTab('add')}
+                  className={`flex-1 px-4 py-2.5 rounded-lg font-medium transition-all ${
+                    activeTab === 'add'
+                      ? 'bg-blue-50 text-blue-600'
+                      : 'text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  Request Stock
+                </button>
+                <button
+                  onClick={() => setActiveTab('transfer')}
+                  className={`flex-1 px-4 py-2.5 rounded-lg font-medium transition-all ${
+                    activeTab === 'transfer'
+                      ? 'bg-blue-50 text-blue-600'
+                      : 'text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  Transfer Stock
+                </button>
+                <button
+                  onClick={() => setActiveTab('return')}
+                  className={`flex-1 px-4 py-2.5 rounded-lg font-medium transition-all ${
+                    activeTab === 'return'
+                      ? 'bg-blue-50 text-blue-600'
+                      : 'text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  Return Stock
+                </button>
               </div>
-            </ContentCard>
-          </motion.div>
-        </motion.div>
+            </div>
 
-        <TransferStockModal
-          isOpen={showTransferModal}
-          onClose={() => setShowTransferModal(false)}
-          currentUser={user}
-          volunteers={volunteers}
-          myStock={myStock}
-          onSuccess={() => {
-            setToast({ message: 'Stock transferred successfully!', type: 'success' });
-            loadData();
-          }}
-          onError={(message) => setToast({ message, type: 'error' })}
-        />
-
-        {showReturnModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col"
-            >
-              <div className="p-6 border-b border-slate-200">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
-                      <Undo2 className="text-blue-600" size={20} />
-                    </div>
-                    <div>
-                      <h2 className="text-xl font-bold text-slate-900">Return Stock</h2>
-                      <p className="text-sm text-slate-500">Return items to central warehouse</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setShowReturnModal(false)}
-                    className="text-slate-400 hover:text-slate-600 transition-colors"
+            <div className="p-6">
+              {activeTab === 'add' && (
+                <form onSubmit={handleRequestStock} className="space-y-6">
+                  <FormSection
+                    title="Request Stock from Central Warehouse"
+                    description="Request items to be assigned to you from central inventory"
                   >
-                    ✕
-                  </button>
-                </div>
-              </div>
+                    {stockItems.map((item, index) => (
+                      <div key={index} className="md:col-span-2 flex gap-4">
+                        <FormField label="Item" required fullWidth>
+                          <Combobox
+                            options={items?.sort((a, b) => a.name.localeCompare(b.name)).map((i) => ({ value: i._id, label: `${i.name} (${i.unit})` })) || []}
+                            value={item.itemId}
+                            onChange={(value) => updateStockItem(index, 'itemId', value)}
+                            placeholder="Select Item"
+                          />
+                        </FormField>
+                        <FormField label="Quantity" required>
+                          <input
+                            type="number"
+                            className="input"
+                            value={item.quantity}
+                            onChange={(e) => updateStockItem(index, 'quantity', parseInt(e.target.value))}
+                            min="1"
+                            required
+                          />
+                        </FormField>
+                        {stockItems.length > 1 && (
+                          <div className="flex items-end">
+                            <Button
+                              type="button"
+                              variant="danger"
+                              icon={Minus}
+                              onClick={() => removeStockItem(index)}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </FormSection>
 
-              <form onSubmit={handleReturnStock} className="p-6 space-y-6 overflow-y-auto flex-1">
-                {returnItems.map((item, index) => (
-                  <div key={index} className="flex gap-4">
-                    <FormField label="Item" required fullWidth>
-                      <Combobox
-                        options={myStock.sort((a, b) => a.item.name.localeCompare(b.item.name)).map((s) => ({ value: s.itemId, label: `${s.item.name} (Available: ${s.stock} ${s.item.unit})` }))}
-                        value={item.itemId}
-                        onChange={(value) => {
-                          const updated = [...returnItems];
-                          updated[index].itemId = value;
-                          setReturnItems(updated);
-                        }}
-                        placeholder="Select Item"
-                      />
-                    </FormField>
-                    <FormField label="Quantity" required>
-                      <input
-                        type="number"
-                        className="input"
-                        value={item.quantity}
-                        onChange={(e) => {
-                          const updated = [...returnItems];
-                          updated[index].quantity = parseInt(e.target.value);
-                          setReturnItems(updated);
-                        }}
-                        min="1"
-                        required
-                      />
-                    </FormField>
-                    {returnItems.length > 1 && (
-                      <div className="flex items-end">
+                  <div className="flex justify-between pt-4">
+                    <Button type="button" variant="secondary" icon={Plus} onClick={addStockItem}>
+                      Add Another Item
+                    </Button>
+                    <Button type="submit">Request Stock</Button>
+                  </div>
+                </form>
+              )}
+
+              {activeTab === 'transfer' && (
+                <div className="space-y-6">
+                  <FormSection
+                    title="Transfer Stock to Another Volunteer"
+                    description="Move your assigned items to another volunteer in the field"
+                  >
+                    {myStock.length === 0 ? (
+                      <div className="md:col-span-2 text-center py-12">
+                        <Package className="w-16 h-16 mx-auto mb-4 text-slate-300" />
+                        <p className="text-slate-600 font-medium">No stock assigned to you</p>
+                        <p className="text-sm text-slate-500 mt-2">Request stock first to transfer items</p>
+                      </div>
+                    ) : (
+                      <div className="md:col-span-2">
                         <Button
                           type="button"
-                          variant="danger"
-                          icon={Minus}
-                          onClick={() => setReturnItems(returnItems.filter((_, i) => i !== index))}
-                        />
+                          variant="primary"
+                          icon={ArrowRightLeft}
+                          onClick={() => setShowTransferModal(true)}
+                          fullWidth
+                        >
+                          Open Transfer Interface
+                        </Button>
                       </div>
                     )}
-                  </div>
-                ))}
-
-                <Button
-                  type="button"
-                  variant="secondary"
-                  icon={Plus}
-                  onClick={() => setReturnItems([...returnItems, { itemId: '', quantity: 0 }])}
-                  fullWidth
-                >
-                  Add Another Item
-                </Button>
-
-                <FormField label="Notes (Optional)" fullWidth>
-                  <textarea
-                    className="input"
-                    rows={3}
-                    value={returnNotes}
-                    onChange={(e) => setReturnNotes(e.target.value)}
-                    placeholder="Reason for return..."
-                  />
-                </FormField>
-
-                <div className="flex gap-3 pt-4 border-t border-slate-200 bg-white sticky bottom-0">
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={() => setShowReturnModal(false)}
-                    fullWidth
-                  >
-                    Cancel
-                  </Button>
-                  <Button type="submit" fullWidth>
-                    Return Stock
-                  </Button>
+                  </FormSection>
                 </div>
-              </form>
-            </motion.div>
-          </div>
-        )}
+              )}
+
+              {activeTab === 'return' && (
+                <form onSubmit={handleReturnStock} className="space-y-6">
+                  <FormSection
+                    title="Return Stock to Central Warehouse"
+                    description="Return your assigned items back to central inventory"
+                  >
+                    {myStock.length === 0 ? (
+                      <div className="md:col-span-2 text-center py-12">
+                        <Package className="w-16 h-16 mx-auto mb-4 text-slate-300" />
+                        <p className="text-slate-600 font-medium">No stock assigned to you</p>
+                        <p className="text-sm text-slate-500 mt-2">Request stock first to return items</p>
+                      </div>
+                    ) : (
+                      <>
+                        {returnItems.map((item, index) => (
+                          <div key={index} className="md:col-span-2 flex gap-4">
+                            <FormField label="Item" required fullWidth>
+                              <Combobox
+                                options={myStock.sort((a, b) => a.item.name.localeCompare(b.item.name)).map((s) => ({ value: s.itemId, label: `${s.item.name} (Available: ${s.stock} ${s.item.unit})` }))}
+                                value={item.itemId}
+                                onChange={(value) => {
+                                  const updated = [...returnItems];
+                                  updated[index].itemId = value;
+                                  setReturnItems(updated);
+                                }}
+                                placeholder="Select Item"
+                              />
+                            </FormField>
+                            <FormField label="Quantity" required>
+                              <input
+                                type="number"
+                                className="input"
+                                value={item.quantity}
+                                onChange={(e) => {
+                                  const updated = [...returnItems];
+                                  updated[index].quantity = parseInt(e.target.value);
+                                  setReturnItems(updated);
+                                }}
+                                min="1"
+                                required
+                              />
+                            </FormField>
+                            {returnItems.length > 1 && (
+                              <div className="flex items-end">
+                                <Button
+                                  type="button"
+                                  variant="danger"
+                                  icon={Minus}
+                                  onClick={() => setReturnItems(returnItems.filter((_, i) => i !== index))}
+                                />
+                              </div>
+                            )}
+                          </div>
+                        ))}
+
+                        <FormField label="Notes (Optional)" fullWidth>
+                          <textarea
+                            className="input"
+                            rows={3}
+                            value={returnNotes}
+                            onChange={(e) => setReturnNotes(e.target.value)}
+                            placeholder="Reason for return..."
+                          />
+                        </FormField>
+                      </>
+                    )}
+                  </FormSection>
+
+                  {myStock.length > 0 && (
+                    <div className="flex justify-between pt-4">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        icon={Plus}
+                        onClick={() => setReturnItems([...returnItems, { itemId: '', quantity: 0 }])}
+                      >
+                        Add Another Item
+                      </Button>
+                      <Button type="submit" icon={Undo2}>
+                        Return Stock
+                      </Button>
+                    </div>
+                  )}
+                </form>
+              )}
+            </div>
+          </ContentCard>
+
+          <ContentCard>
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-xl font-semibold text-slate-900">My Stock</h2>
+                  <p className="text-sm text-slate-500 mt-1">Your current inventory status</p>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="text-center">
+                    <p className="text-sm text-slate-500">Total Items</p>
+                    <p className="text-2xl font-bold text-slate-900">{myStock.length}</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-sm text-slate-500">Total Quantity</p>
+                    <p className="text-2xl font-bold text-slate-900">{totalStock}</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-sm text-slate-500">Low Stock</p>
+                    <p className="text-2xl font-bold text-orange-600">{lowStockCount}</p>
+                  </div>
+                </div>
+              </div>
+
+              {myStock.length === 0 ? (
+                <div className="text-center py-16">
+                  <Package className="w-20 h-20 mx-auto mb-4 text-slate-300" />
+                  <p className="text-lg font-medium text-slate-600">No stock assigned yet</p>
+                  <p className="text-sm text-slate-500 mt-2">Request stock from the Request Stock tab</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-slate-50 border-b border-slate-200">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">Item</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">Category</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">Stock</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">Unit</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200">
+                      {myStock.map((stock) => {
+                        const status = getStockStatus(stock.stock);
+                        return (
+                          <tr key={stock.itemId} className="hover:bg-slate-50">
+                            <td className="px-4 py-3 text-sm font-medium text-slate-900">{stock.item.name}</td>
+                            <td className="px-4 py-3 text-sm text-slate-600">{stock.item.category}</td>
+                            <td className="px-4 py-3 text-sm font-bold text-slate-900">{stock.stock}</td>
+                            <td className="px-4 py-3 text-sm text-slate-600">{stock.item.unit}</td>
+                            <td className="px-4 py-3">
+                              <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${status.color}`}>
+                                {status.icon} {status.label}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </ContentCard>
+
+          <TransferStockModal
+            isOpen={showTransferModal}
+            onClose={() => setShowTransferModal(false)}
+            currentUser={user}
+            volunteers={volunteers}
+            myStock={myStock}
+            onSuccess={() => {
+              setToast({ message: 'Stock transferred successfully!', type: 'success' });
+              loadData();
+            }}
+            onError={(message) => setToast({ message, type: 'error' })}
+          />
+        </div>
       </>
     );
   }

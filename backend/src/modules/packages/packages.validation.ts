@@ -48,3 +48,10 @@ export const distributePackageSchema = z.object({
   campaignId: z.string().optional(),
   requestId: z.string().uuid()
 });
+
+export const selfAssignPackageSchema = z.object({
+  packageId: z.string(),
+  quantity: z.number().int().min(1),
+  requestId: z.string().uuid(),
+  notes: z.string().optional()
+});

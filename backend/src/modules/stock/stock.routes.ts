@@ -15,6 +15,7 @@ router.get('/central', stockController.getCentralStock.bind(stockController));
 router.get('/volunteer/:volunteerId', stockController.getVolunteerStock.bind(stockController));
 router.post('/add', roleGuard(UserRole.ADMIN), stockController.addStock.bind(stockController));
 router.post('/assign', roleGuard(UserRole.ADMIN), stockController.assignStock.bind(stockController));
+router.post('/self-assign', stockController.selfAssignStock.bind(stockController));
 router.post('/return', stockController.returnStock.bind(stockController));
 router.post('/transfer', stockController.transferStock.bind(stockController));
 

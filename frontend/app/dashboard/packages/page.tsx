@@ -9,6 +9,7 @@ import { v4 as uuidv4 } from 'uuid';
 import Toast from '@/components/ui/toast-notification';
 import ConfirmModal from '@/components/ui/confirm-modal';
 import { Combobox } from '@/components/ui/combobox';
+import { VolunteerPackagesView } from './volunteer-view';
 
 export default function PackagesPage() {
   const { user } = useAuth();
@@ -23,12 +24,19 @@ export default function PackagesPage() {
   const [stockSummary, setStockSummary] = useState<any>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<{ show: boolean; packageId: string | null }>({ show: false, packageId: null });
+  const [volunteerPackages, setVolunteerPackages] = useState<any[]>([]);
 
   const isAdmin = user?.role === 'ADMIN';
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [isAdmin]);
+
+  useEffect(() => {
+    if (!isAdmin && user?._id && packages.length > 0) {
+      loadVolunteerPackages();
+    }
+  }, [isAdmin, user?._id, packages]);
 
   const loadData = async () => {
     try {
@@ -45,6 +53,33 @@ export default function PackagesPage() {
       console.error('Error loading data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadVolunteerPackages = async () => {
+    if (!user?._id) return;
+    try {
+      const res = await stockAPI.getVolunteerStock(user._id);
+      const stockData = res.data.data;
+      const pkgSummary: any = {};
+      
+      packages.forEach(pkg => {
+        let minPackages = Infinity;
+        pkg.items.forEach((item: any) => {
+          const itemId = typeof item.itemId === 'object' ? item.itemId._id : item.itemId;
+          const stockItem = stockData.find((s: any) => s.itemId === itemId);
+          const available = stockItem?.stock || 0;
+          const possible = Math.floor(available / item.quantity);
+          minPackages = Math.min(minPackages, possible);
+        });
+        if (minPackages > 0 && minPackages !== Infinity) {
+          pkgSummary[pkg._id] = { package: pkg, available: minPackages };
+        }
+      });
+      
+      setVolunteerPackages(Object.values(pkgSummary));
+    } catch (error) {
+      console.error('Error loading volunteer packages:', error);
     }
   };
 
@@ -94,6 +129,17 @@ export default function PackagesPage() {
           <div className="h-64 bg-gray-200 rounded"></div>
         </div>
       </div>
+    );
+  }
+
+  if (!isAdmin) {
+    return (
+      <VolunteerPackagesView
+        user={user}
+        packages={packages}
+        volunteerPackages={volunteerPackages}
+        onRefresh={() => { loadData(); loadVolunteerPackages(); }}
+      />
     );
   }
 

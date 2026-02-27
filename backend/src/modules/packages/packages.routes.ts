@@ -19,6 +19,7 @@ router.patch('/:id', roleGuard(UserRole.ADMIN), packagesController.updatePackage
 router.delete('/:id', roleGuard(UserRole.ADMIN), packagesController.deletePackage.bind(packagesController));
 
 router.post('/assign', roleGuard(UserRole.ADMIN), packagesController.assignPackage.bind(packagesController));
+router.post('/self-assign', packagesController.selfAssignPackage.bind(packagesController));
 router.post('/distribute', packagesController.distributePackage.bind(packagesController));
 
 export default router;

@@ -49,7 +49,9 @@ export default function DistributionPage() {
     city: '',
     pinCode: '',
     area: '',
-    campaignId: ''
+    campaignId: '',
+    beneficiaryName: '',
+    beneficiaryPhone: ''
   });
 
   useEffect(() => {
@@ -356,7 +358,7 @@ export default function DistributionPage() {
       
       await distributionAPI.create(payload);
       setToast({ message: 'Distribution recorded successfully!', type: 'success' });
-      setFormData({ state: '', city: '', pinCode: '', area: '', campaignId: '' });
+      setFormData({ state: '', city: '', pinCode: '', area: '', campaignId: '', beneficiaryName: '', beneficiaryPhone: '' });
       setCart([]);
       
       loadVolunteerStock(volunteerId);
@@ -630,6 +632,8 @@ export default function DistributionPage() {
                     </div>
                     <Input label="Pin Code" value={formData.pinCode} onChange={(e) => setFormData({ ...formData, pinCode: e.target.value })} required />
                     <Input label="Area" value={formData.area} onChange={(e) => setFormData({ ...formData, area: e.target.value })} required />
+                    <Input label="Beneficiary Name (Optional)" value={formData.beneficiaryName} onChange={(e) => setFormData({ ...formData, beneficiaryName: e.target.value })} />
+                    <Input label="Beneficiary Phone (Optional)" value={formData.beneficiaryPhone} onChange={(e) => setFormData({ ...formData, beneficiaryPhone: e.target.value })} />
                     <div>
                       <label className="block text-sm font-medium text-slate-700 mb-2">Campaign (Optional)</label>
                       <Combobox
@@ -736,10 +740,11 @@ export default function DistributionPage() {
                         <Combobox
                           options={items.filter(item => item.isActive).sort((a, b) => a.name.localeCompare(b.name)).map(item => {
                             const remaining = getRemainingStock(item._id);
+                            const inCart = cart.some(c => c.type === 'item' && c.referenceId === item._id);
                             return {
                               value: `item_${item._id}`,
                               label: `📋 ${item.name} (${remaining} ${item.unit} available)`,
-                              disabled: remaining === 0
+                              disabled: remaining === 0 || inCart
                             };
                           })}
                           value={selectedOption}

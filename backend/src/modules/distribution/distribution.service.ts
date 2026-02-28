@@ -20,6 +20,8 @@ export class DistributionService {
       pinCode: string;
       area: string;
       campaignId?: string;
+      beneficiaryName?: string;
+      beneficiaryPhone?: string;
       items: Array<{ itemId: string; quantity: number }>;
       packages: Array<{ packageId: string; quantity: number }>;
       requestId: string;
@@ -116,6 +118,8 @@ export class DistributionService {
         pinCode: data.pinCode,
         area: data.area,
         campaignId: data.campaignId ? new mongoose.Types.ObjectId(data.campaignId) : undefined,
+        beneficiaryName: data.beneficiaryName,
+        beneficiaryPhone: data.beneficiaryPhone,
         items: expandedItems.map(i => ({
           itemId: new mongoose.Types.ObjectId(i.itemId),
           quantity: i.quantity
@@ -249,6 +253,7 @@ export class DistributionService {
       city: pd.location?.cityId?.name || '',
       area: pd.location?.address || '',
       pinCode: '',
+      beneficiaryInfo: pd.beneficiaryInfo,
       items: pd.packageId?.items?.map((item: any) => ({
         itemId: item.itemId,
         quantity: item.quantity * pd.quantity

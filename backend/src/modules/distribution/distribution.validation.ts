@@ -7,6 +7,8 @@ export const createDistributionSchema = z.object({
   pinCode: z.string().min(1),
   area: z.string().min(1),
   campaignId: z.string().optional(),
+  beneficiaryName: z.string().optional(),
+  beneficiaryPhone: z.string().optional(),
   items: z.array(z.object({
     itemId: z.string(),
     quantity: z.number().min(1)

@@ -11,6 +11,7 @@ import MobileVolunteerLayout from '@/components/mobile-volunteer/MobileLayout';
 
 const pageInfo: Record<string, { title: string; description: string }> = {
   '/dashboard/items': { title: 'Items', description: 'Manage inventory items and categories' },
+  '/dashboard/packages': { title: 'Package Management', description: 'Create and manage item bundles' },
   '/dashboard/stock': { title: 'Stock Management', description: 'Add stock to central inventory or assign to volunteers' },
   '/dashboard/users': { title: 'Users', description: 'Manage user accounts and permissions' },
   '/dashboard/campaigns': { title: 'Campaigns', description: 'Manage distribution campaigns and relief efforts' },

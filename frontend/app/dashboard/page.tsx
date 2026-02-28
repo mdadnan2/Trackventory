@@ -212,7 +212,7 @@ export default function DashboardPage() {
                               </p>
                             </div>
                             <p className="text-sm text-slate-600">
-                              {dist.area}, {dist.cityId?.name || 'City'}
+                              {dist.area}, {dist.city}
                             </p>
                           </div>
                           <span className="text-xs text-slate-500 whitespace-nowrap">

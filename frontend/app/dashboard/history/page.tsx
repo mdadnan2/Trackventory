@@ -149,11 +149,11 @@ export default function HistoryPage() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="text-sm font-medium text-gray-900">
-                          {dist.beneficiaryInfo?.name || dist.beneficiaryName || '-'}
+                          {dist.isPackage 
+                            ? (dist.beneficiary?.name || dist.beneficiaryInfo?.name || dist.beneficiaryName || '-')
+                            : (dist.beneficiaryName || dist.beneficiaryInfo?.name || '-')
+                          }
                         </div>
-                        {(dist.beneficiaryInfo?.phone || dist.beneficiaryPhone) && (
-                          <div className="text-xs text-gray-500">{dist.beneficiaryInfo?.phone || dist.beneficiaryPhone}</div>
-                        )}
                       </td>
                       <td className="px-4 py-3">
                         <div className="text-sm text-gray-900">

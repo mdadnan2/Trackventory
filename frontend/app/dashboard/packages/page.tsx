@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { packagesAPI, itemsAPI, usersAPI, stockAPI } from '@/services/api';
 import { Package, Item, User } from '@/types';
-import { Package as PackageIcon, Plus, Edit, Trash2, Users, Send, Box } from 'lucide-react';
+import { Package as PackageIcon, Plus, Edit, Trash2, Box } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import Toast from '@/components/ui/toast-notification';
 import ConfirmModal from '@/components/ui/confirm-modal';
@@ -18,7 +18,7 @@ export default function PackagesPage() {
   const [volunteers, setVolunteers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showAssignModal, setShowAssignModal] = useState(false);
+
   const [showStockModal, setShowStockModal] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState<Package | null>(null);
   const [stockSummary, setStockSummary] = useState<any>(null);
@@ -135,56 +135,28 @@ export default function PackagesPage() {
   if (!isAdmin) {
     return (
       <VolunteerPackagesView
-        user={user}
-        packages={packages}
         volunteerPackages={volunteerPackages}
-        onRefresh={() => { loadData(); loadVolunteerPackages(); }}
       />
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Mobile Header */}
-      <div className="sticky top-0 z-10 bg-white border-b px-4 py-3 md:hidden">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <PackageIcon className="w-5 h-5 text-blue-600" />
-            <h1 className="text-lg font-semibold">Packages</h1>
-          </div>
-          {isAdmin && (
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="p-2 bg-blue-600 text-white rounded-lg"
-            >
-              <Plus className="w-5 h-5" />
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Desktop Header */}
-      <div className="hidden md:block bg-white border-b px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <PackageIcon className="w-6 h-6 text-blue-600" />
-            <h1 className="text-2xl font-bold">Package Management</h1>
-          </div>
-          {isAdmin && (
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
-              <Plus className="w-5 h-5" />
-              Create Package
-            </button>
-          )}
-        </div>
+    <div className="space-y-6">
+      {/* Add Button - Top Right */}
+      <div className="flex justify-end -mt-4">
+        {isAdmin && (
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            <Plus className="w-5 h-5" />
+            Add
+          </button>
+        )}
       </div>
 
       {/* Content */}
-      <div className="p-4 md:p-6">
-        {packages.length === 0 ? (
+      {packages.length === 0 ? (
           <div className="bg-white rounded-lg p-8 text-center">
             <PackageIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-gray-900 mb-2">No Packages Yet</h3>
@@ -198,28 +170,23 @@ export default function PackagesPage() {
               </button>
             )}
           </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {packages.map((pkg) => (
-              <PackageCard
-                key={pkg._id}
-                package={pkg}
-                isAdmin={isAdmin}
-                onEdit={() => {
-                  setSelectedPackage(pkg);
-                  setShowCreateModal(true);
-                }}
-                onDelete={() => handleDelete(pkg._id)}
-                onAssign={() => {
-                  setSelectedPackage(pkg);
-                  setShowAssignModal(true);
-                }}
-                onViewStock={() => viewStockSummary(pkg)}
-              />
-            ))}
-          </div>
-        )}
-      </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {packages.map((pkg) => (
+            <PackageCard
+              key={pkg._id}
+              package={pkg}
+              isAdmin={isAdmin}
+              onEdit={() => {
+                setSelectedPackage(pkg);
+                setShowCreateModal(true);
+              }}
+              onDelete={() => handleDelete(pkg._id)}
+              onViewStock={() => viewStockSummary(pkg)}
+            />
+          ))}
+        </div>
+      )}
 
       {/* Toast Notification */}
       {toast && (
@@ -259,22 +226,6 @@ export default function PackagesPage() {
         />
       )}
 
-      {showAssignModal && selectedPackage && (
-        <AssignPackageModal
-          package={selectedPackage}
-          volunteers={volunteers}
-          onClose={() => {
-            setShowAssignModal(false);
-            setSelectedPackage(null);
-          }}
-          onSuccess={() => {
-            loadData();
-            setShowAssignModal(false);
-            setSelectedPackage(null);
-          }}
-        />
-      )}
-
       {showStockModal && stockSummary && (
         <StockSummaryModal
           summary={stockSummary}
@@ -289,7 +240,7 @@ export default function PackagesPage() {
   );
 }
 
-function PackageCard({ package: pkg, isAdmin, onEdit, onDelete, onAssign, onViewStock }: any) {
+function PackageCard({ package: pkg, isAdmin, onEdit, onDelete, onViewStock }: any) {
   return (
     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all overflow-hidden group">
       {/* Header with gradient */}
@@ -342,13 +293,6 @@ function PackageCard({ package: pkg, isAdmin, onEdit, onDelete, onAssign, onView
           </button>
           {isAdmin && (
             <>
-              <button
-                onClick={onAssign}
-                className="flex-1 min-w-[100px] px-3 py-2 text-sm bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-xl hover:from-purple-600 hover:to-pink-700 transition-all flex items-center justify-center gap-1.5 font-medium shadow-sm"
-              >
-                <Send className="w-4 h-4" />
-                Assign
-              </button>
               <button
                 onClick={onEdit}
                 className="px-3 py-2 text-sm bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 transition-colors"
@@ -555,145 +499,6 @@ function CreatePackageModal({ package: pkg, items, onClose, onSuccess }: any) {
               className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
             >
               {loading ? 'Saving...' : pkg ? 'Update' : 'Create'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-function AssignPackageModal({ package: pkg, volunteers, onClose, onSuccess }: any) {
-  const [formData, setFormData] = useState({
-    volunteerId: '',
-    quantity: 1
-  });
-  const [loading, setLoading] = useState(false);
-  const [stockSummary, setStockSummary] = useState<any>(null);
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    loadStockSummary();
-  }, []);
-
-  const loadStockSummary = async () => {
-    try {
-      const res = await packagesAPI.getStockSummary(pkg._id, 'central');
-      setStockSummary(res.data.data);
-    } catch (error) {
-      console.error('Error loading stock:', error);
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Validation
-    if (!formData.volunteerId) {
-      setError('Please select a volunteer');
-      return;
-    }
-    
-    if (formData.quantity < 1) {
-      setError('Quantity must be at least 1');
-      return;
-    }
-
-    if (stockSummary && formData.quantity > stockSummary.maxPackages) {
-      setError(`Insufficient stock. Only ${stockSummary.maxPackages} package${stockSummary.maxPackages !== 1 ? 's' : ''} available in central warehouse`);
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setError('');
-      await packagesAPI.assign({
-        packageId: pkg._id,
-        volunteerId: formData.volunteerId,
-        quantity: formData.quantity,
-        requestId: uuidv4()
-      });
-      onSuccess();
-    } catch (error: any) {
-      const errorMsg = error.response?.data?.error?.message;
-      if (errorMsg?.includes('Insufficient')) {
-        setError(errorMsg);
-      } else if (errorMsg?.includes('not found')) {
-        setError('Selected volunteer or package is no longer available');
-      } else if (errorMsg?.includes('inactive')) {
-        setError('Package or volunteer is inactive');
-      } else {
-        setError(errorMsg || 'Failed to assign package. Please try again.');
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end md:items-center justify-center p-0 md:p-4 overflow-y-auto">
-      <div className="bg-white w-full md:max-w-lg rounded-lg max-h-[95vh] md:max-h-[90vh] flex flex-col my-auto">
-        <div className="sticky top-0 bg-white border-b px-4 md:px-6 py-4 flex items-center justify-between flex-shrink-0">
-          <h2 className="text-lg md:text-xl font-semibold">Assign Package</h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">✕</button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="p-4 md:p-6 space-y-4 overflow-y-auto flex-1">
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
-              {error}
-            </div>
-          )}
-          
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-            <div className="text-sm font-medium text-blue-900 mb-1">{pkg.name}</div>
-            {stockSummary && (
-              <div className="text-sm text-blue-700">
-                Available: <span className="font-semibold">{stockSummary.maxPackages}</span> packages
-              </div>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Volunteer *
-            </label>
-            <Combobox
-              options={volunteers.map((v: User) => ({ value: v._id, label: v.name }))}
-              value={formData.volunteerId}
-              onChange={(value) => setFormData({ ...formData, volunteerId: value })}
-              placeholder="Select volunteer"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Quantity *
-            </label>
-            <input
-              type="number"
-              value={formData.quantity}
-              onChange={(e) => setFormData({ ...formData, quantity: parseInt(e.target.value) })}
-              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-              min="1"
-              max={stockSummary?.maxPackages || 999}
-            />
-          </div>
-
-          <div className="flex gap-3 pt-4 sticky bottom-0 bg-white pb-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2 border rounded-lg hover:bg-gray-50"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-            >
-              {loading ? 'Assigning...' : 'Assign'}
             </button>
           </div>
         </form>

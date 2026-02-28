@@ -13,6 +13,8 @@ export interface IDistribution extends Document {
   area: string;
   campaignId?: mongoose.Types.ObjectId;
   items: IDistributionItem[];
+  beneficiaryName?: string;
+  beneficiaryPhone?: string;
   requestId: string;
   createdAt: Date;
 }
@@ -28,6 +30,8 @@ const distributionSchema = new Schema<IDistribution>({
     itemId: { type: Schema.Types.ObjectId, ref: 'Item', required: true },
     quantity: { type: Number, required: true, min: 1 }
   }],
+  beneficiaryName: { type: String },
+  beneficiaryPhone: { type: String },
   requestId: { type: String, required: true, unique: true },
   createdAt: { type: Date, default: Date.now }
 });

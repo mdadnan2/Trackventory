@@ -437,8 +437,6 @@ export default function DistributionPage() {
   return (
     <>
       <ToastContainer toast={toast} onClose={() => setToast(null)} />
-      <div className="space-y-6">
-      <PageHeader title="Distribution" description="Record distributions and report damaged items" />
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
           <Card padding="none">
@@ -804,7 +802,6 @@ export default function DistributionPage() {
           </div>
         </Card>
       </div>
-    </div>
     </>
   );
 }

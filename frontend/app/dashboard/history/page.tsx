@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { distributionAPI } from '@/services/api';
 import { History, Info, X } from 'lucide-react';
+import { Pagination } from '@/components/ui/pagination';
 
 export default function HistoryPage() {
   const { user } = useAuth();
@@ -12,24 +13,27 @@ export default function HistoryPage() {
   const [stats, setStats] = useState({ total: 0, totalItems: 0, packages: 0, items: 0 });
   const [filter, setFilter] = useState<'all' | 'items' | 'packages'>('all');
   const [selectedItems, setSelectedItems] = useState<any>(null);
+  const [pagination, setPagination] = useState({ currentPage: 1, totalPages: 1, totalRecords: 0, pageSize: 10 });
 
   useEffect(() => {
-    if (user) loadHistory();
+    if (user) loadHistory(1);
   }, [user]);
 
-  const loadHistory = async () => {
+  const loadHistory = async (page: number) => {
     try {
       setLoading(true);
-      const res = await distributionAPI.getAll({ volunteerId: user?._id });
-      const data = res.data.data.data || [];
+      const res = await distributionAPI.getAll({ volunteerId: user?._id, page });
+      const result = res.data.data;
+      const data = result.data || [];
       setHistory(data);
+      setPagination(result.pagination);
       
       const totalItems = data.reduce((sum: number, dist: any) => 
         sum + dist.items.reduce((itemSum: number, item: any) => itemSum + item.quantity, 0), 0
       );
       const packages = data.filter((d: any) => d.isPackage).length;
       const items = data.filter((d: any) => !d.isPackage).length;
-      setStats({ total: data.length, totalItems, packages, items });
+      setStats({ total: result.pagination.totalRecords, totalItems, packages, items });
     } catch (error) {
       console.error('Error loading history:', error);
     } finally {
@@ -53,51 +57,8 @@ export default function HistoryPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white border-b px-6 py-4">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <History className="w-6 h-6 text-blue-600" />
-            <h1 className="text-2xl font-bold">Distribution History</h1>
-          </div>
-          <div className="flex gap-4">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600">{stats.total}</div>
-              <div className="text-xs text-gray-600">Distributions</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">{stats.totalItems}</div>
-              <div className="text-xs text-gray-600">Items Distributed</div>
-            </div>
-          </div>
-        </div>
-        
-        <div className="flex gap-2">
-          <button
-            onClick={() => setFilter('all')}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-              filter === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}>
-            All ({stats.total})
-          </button>
-          <button
-            onClick={() => setFilter('items')}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-              filter === 'items' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}>
-            Items Only ({stats.items})
-          </button>
-          <button
-            onClick={() => setFilter('packages')}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-              filter === 'packages' ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}>
-            📦 Packages ({stats.packages})
-          </button>
-        </div>
-      </div>
-
-      <div className="p-6">
+    <div className="p-6">
+      <div>
         {filteredHistory.length === 0 ? (
           <div className="bg-white rounded-lg p-8 text-center">
             <History className="w-16 h-16 text-gray-300 mx-auto mb-4" />
@@ -106,6 +67,29 @@ export default function HistoryPage() {
           </div>
         ) : (
           <div className="bg-white rounded-lg border overflow-hidden">
+            <div className="flex gap-2 p-4 border-b bg-gray-50">
+              <button
+                onClick={() => setFilter('all')}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  filter === 'all' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-100'
+                }`}>
+                All ({stats.total})
+              </button>
+              <button
+                onClick={() => setFilter('items')}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  filter === 'items' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-100'
+                }`}>
+                Items Only ({stats.items})
+              </button>
+              <button
+                onClick={() => setFilter('packages')}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  filter === 'packages' ? 'bg-purple-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-100'
+                }`}>
+                📦 Packages ({stats.packages})
+              </button>
+            </div>
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-gray-50 border-b">
@@ -189,6 +173,13 @@ export default function HistoryPage() {
                 </tbody>
               </table>
             </div>
+            <div className="p-4 border-t">
+              <Pagination
+                currentPage={pagination.currentPage}
+                totalPages={pagination.totalPages}
+                onPageChange={loadHistory}
+              />
+            </div>
           </div>
         )}
       </div>
@@ -230,7 +221,7 @@ function ItemDetailsModal({ distribution, items, onClose }: any) {
           {distribution.isPackage && distribution.packageName && (
             <div className="mb-4 p-3 bg-purple-50 border border-purple-200 rounded-lg">
               <div className="flex items-center gap-2 text-sm font-medium text-purple-900">
-                📦 Package: {distribution.packageName}
+                📦 Package: {distribution.packageQuantity || 1}x {distribution.packageName}
               </div>
             </div>
           )}

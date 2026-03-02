@@ -17,6 +17,7 @@ const pageInfo: Record<string, { title: string; description: string }> = {
   '/dashboard/campaigns': { title: 'Campaigns', description: 'Manage distribution campaigns and relief efforts' },
   '/dashboard/distribution': { title: 'Distribution', description: 'Record distributions and report damages' },
   '/dashboard/reports': { title: 'Reports', description: 'Analytics and distribution reports' },
+  '/dashboard/history': { title: 'Distribution History', description: 'View your distribution records' },
 };
 
 export default function DashboardLayout({

@@ -15,6 +15,9 @@ export interface IDistribution extends Document {
   items: IDistributionItem[];
   beneficiaryName?: string;
   beneficiaryPhone?: string;
+  isPackage?: boolean;
+  packageName?: string;
+  packageQuantity?: number;
   requestId: string;
   createdAt: Date;
 }
@@ -32,6 +35,9 @@ const distributionSchema = new Schema<IDistribution>({
   }],
   beneficiaryName: { type: String },
   beneficiaryPhone: { type: String },
+  isPackage: { type: Boolean, default: false },
+  packageName: { type: String },
+  packageQuantity: { type: Number },
   requestId: { type: String, required: true, unique: true },
   createdAt: { type: Date, default: Date.now }
 });

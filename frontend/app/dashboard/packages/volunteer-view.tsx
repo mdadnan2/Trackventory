@@ -1,42 +1,11 @@
 'use client';
 
-import { useState } from 'react';
 import { Package as PackageIcon } from 'lucide-react';
-import Toast from '@/components/ui/toast-notification';
 
 export function VolunteerPackagesView({ volunteerPackages }: any) {
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
-
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white border-b px-4 md:px-6 py-4">
-        <div className="flex items-center gap-3">
-          <PackageIcon className="w-6 h-6 text-purple-600" />
-          <h1 className="text-xl md:text-2xl font-bold">My Packages</h1>
-        </div>
-      </div>
-
-      <div className="p-4 md:p-6">
-        <div className="bg-white rounded-lg shadow-sm">
-          <div className="border-b">
-            <div className="flex">
-              <button
-                onClick={() => setActiveTab('myPackages')}
-                className={`flex-1 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === 'myPackages' ? 'border-purple-600 text-purple-600' : 'border-transparent text-gray-600 hover:text-gray-900'
-                }`}>
-                My Packages
-              </button>
-            </div>
-          </div>
-
-          <div className="p-4 md:p-6">
-            <MyPackagesTab volunteerPackages={volunteerPackages} />
-          </div>
-        </div>
-      </div>
-
-      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+    <div className="p-4 md:p-6">
+      <MyPackagesTab volunteerPackages={volunteerPackages} />
     </div>
   );
 }

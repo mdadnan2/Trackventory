@@ -55,12 +55,21 @@ export class DistributionService {
       });
       
       // Process packages
+      let packageMetadata: { name: string; quantity: number } | undefined;
       if (data.packages.length > 0) {
         const packageIds = data.packages.map(p => new mongoose.Types.ObjectId(p.packageId));
         const foundPackages = await Package.find({ _id: { $in: packageIds }, isActive: true }).session(session);
         
         if (foundPackages.length !== packageIds.length) {
           throw new BadRequestError('Some packages not found or inactive');
+        }
+        
+        // Store first package metadata for display
+        if (data.packages[0]) {
+          const firstPkg = foundPackages.find(p => p._id.toString() === data.packages[0].packageId);
+          if (firstPkg) {
+            packageMetadata = { name: firstPkg.name, quantity: data.packages[0].quantity };
+          }
         }
         
         // Expand packages into items and add to requirements
@@ -124,6 +133,9 @@ export class DistributionService {
           itemId: new mongoose.Types.ObjectId(i.itemId),
           quantity: i.quantity
         })),
+        isPackage: data.packages.length > 0,
+        packageName: packageMetadata?.name,
+        packageQuantity: packageMetadata?.quantity,
         requestId: data.requestId
       }], { session });
 
@@ -229,7 +241,7 @@ export class DistributionService {
       Distribution.find(query)
         .populate('volunteerId', 'name email')
         .populate('campaignId', 'name')
-        .populate('items.itemId', 'name unit')
+        .populate('items.itemId', 'name unit category')
         .sort({ createdAt: -1 }),
       filters?.volunteerId ? 
         mongoose.model('PackageDistribution').find({ volunteerId: query.volunteerId })
@@ -259,7 +271,8 @@ export class DistributionService {
         quantity: item.quantity * pd.quantity
       })) || [],
       isPackage: true,
-      packageName: pd.packageId?.name
+      packageName: pd.packageId?.name,
+      packageQuantity: pd.quantity
     }));
 
     const combined = [...distributions, ...pkgDists].sort((a, b) => 

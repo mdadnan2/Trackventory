@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { packagesAPI, itemsAPI, usersAPI, stockAPI } from '@/services/api';
 import { Package, Item, User } from '@/types';
-import { Package as PackageIcon, Plus, Edit, Trash2, Box } from 'lucide-react';
+import { Package as PackageIcon, Plus, Edit, Trash2, Box, Search, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import Toast from '@/components/ui/toast-notification';
 import ConfirmModal from '@/components/ui/confirm-modal';
@@ -18,6 +18,9 @@ export default function PackagesPage() {
   const [volunteers, setVolunteers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const [showStockModal, setShowStockModal] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState<Package | null>(null);
@@ -121,9 +124,20 @@ export default function PackagesPage() {
     }
   };
 
+  // Filter and paginate packages
+  const filteredPackages = packages.filter(pkg => 
+    pkg.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    pkg.description?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const totalPages = Math.ceil(filteredPackages.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedPackages = filteredPackages.slice(startIndex, endIndex);
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 p-4 md:p-6">
+      <div className="max-w-5xl mx-auto px-6 py-8 bg-gray-50">
         <div className="animate-pulse space-y-4">
           <div className="h-8 bg-gray-200 rounded w-48"></div>
           <div className="h-64 bg-gray-200 rounded"></div>
@@ -141,51 +155,151 @@ export default function PackagesPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Add Button - Top Right */}
-      <div className="flex justify-end -mt-4">
-        {isAdmin && (
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            <Plus className="w-5 h-5" />
-            Add
-          </button>
-        )}
+    <div className="max-w-5xl mx-auto px-6 py-8 space-y-6 bg-gray-50 min-h-screen">
+      {/* Header Section */}
+      <div className="flex justify-between items-start">
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-900">Package Management</h1>
+          <p className="text-sm text-gray-500 mt-1">Create and manage volunteer distribution packages</p>
+        </div>
+        <button
+          onClick={() => setShowCreateModal(true)}
+          className="flex items-center gap-2 bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-blue-700 shadow-sm"
+        >
+          <Plus className="w-4 h-4" />
+          Add
+        </button>
       </div>
 
-      {/* Content */}
-      {packages.length === 0 ? (
-          <div className="bg-white rounded-lg p-8 text-center">
-            <PackageIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">No Packages Yet</h3>
-            <p className="text-gray-600 mb-4">Create your first package to get started</p>
-            {isAdmin && (
-              <button
-                onClick={() => setShowCreateModal(true)}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg"
-              >
-                Create Package
-              </button>
-            )}
-          </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {packages.map((pkg) => (
-            <PackageCard
-              key={pkg._id}
-              package={pkg}
-              isAdmin={isAdmin}
-              onEdit={() => {
-                setSelectedPackage(pkg);
-                setShowCreateModal(true);
-              }}
-              onDelete={() => handleDelete(pkg._id)}
-              onViewStock={() => viewStockSummary(pkg)}
-            />
-          ))}
+      {/* Search Bar */}
+      <div className="relative w-full">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => {
+            setSearchQuery(e.target.value);
+            setCurrentPage(1);
+          }}
+          placeholder="Search packages..."
+          className="w-full border border-gray-200 rounded-lg pl-10 pr-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+        />
+      </div>
+
+      {/* Package List */}
+      {paginatedPackages.length === 0 ? (
+        <div className="bg-white rounded-lg p-8 text-center">
+          <PackageIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            {searchQuery ? 'No packages found' : 'No Packages Yet'}
+          </h3>
+          <p className="text-gray-600 mb-4">
+            {searchQuery ? 'Try adjusting your search' : 'Create your first package to get started'}
+          </p>
+          {!searchQuery && (
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              Create Package
+            </button>
+          )}
         </div>
+      ) : (
+        <>
+          <div className="space-y-3">
+            {paginatedPackages.map((pkg) => {
+              const totalItems = pkg.items.reduce((sum: number, item: any) => sum + item.quantity, 0);
+              return (
+                <div
+                  key={pkg._id}
+                  className="bg-white border border-gray-200 rounded-xl px-5 py-4 hover:bg-gray-50 transition flex justify-between items-center"
+                >
+                  <div>
+                    <h3 className="text-base font-semibold text-gray-900">{pkg.name}</h3>
+                    <p className="text-sm text-gray-500">
+                      {pkg.items.length} {pkg.items.length === 1 ? 'item' : 'items'} • {totalItems} total quantity
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => viewStockSummary(pkg)}
+                      className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm bg-blue-50 text-blue-700 hover:bg-blue-100 font-medium"
+                    >
+                      <Eye className="w-4 h-4" />
+                      View
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSelectedPackage(pkg);
+                        setShowCreateModal(true);
+                      }}
+                      className="rounded-lg px-3 py-1.5 text-sm border border-gray-200 hover:bg-gray-100"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(pkg._id)}
+                      className="rounded-lg px-3 py-1.5 text-sm border border-gray-200 hover:bg-red-50 hover:border-red-200 text-red-600"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex justify-between items-center mt-6">
+              <div className="text-sm text-gray-500">
+                Showing {startIndex + 1}–{Math.min(endIndex, filteredPackages.length)} of {filteredPackages.length} packages
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum;
+                  if (totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (currentPage <= 3) {
+                    pageNum = i + 1;
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i;
+                  } else {
+                    pageNum = currentPage - 2 + i;
+                  }
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => setCurrentPage(pageNum)}
+                      className={`rounded-lg px-3 py-1.5 text-sm ${
+                        currentPage === pageNum
+                          ? 'bg-blue-600 text-white border-blue-600'
+                          : 'border border-gray-200 hover:bg-gray-100'
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+                <button
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {/* Toast Notification */}
@@ -236,79 +350,6 @@ export default function PackagesPage() {
           }}
         />
       )}
-    </div>
-  );
-}
-
-function PackageCard({ package: pkg, isAdmin, onEdit, onDelete, onViewStock }: any) {
-  return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all overflow-hidden group">
-      {/* Header with gradient */}
-      <div className="bg-gradient-to-r from-purple-500 to-pink-600 px-5 py-3">
-        <div className="flex items-center justify-between">
-          <h3 className="font-semibold text-white text-sm truncate">{pkg.name}</h3>
-          <div className="w-8 h-8 rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center">
-            <PackageIcon className="w-4 h-4 text-white" />
-          </div>
-        </div>
-      </div>
-
-      <div className="p-4">
-        {/* Description */}
-        {pkg.description && (
-          <p className="text-sm text-slate-600 mb-3 line-clamp-2">{pkg.description}</p>
-        )}
-
-        {/* Items count badge */}
-        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-purple-100 text-purple-700 rounded-lg text-xs font-medium mb-3">
-          <Box className="w-3.5 h-3.5" />
-          {pkg.items.length} {pkg.items.length === 1 ? 'item' : 'items'}
-        </div>
-
-        {/* Items list */}
-        <div className="space-y-2 mb-4">
-          {pkg.items.slice(0, 3).map((item: any, idx: number) => (
-            <div key={idx} className="flex items-center justify-between text-sm bg-slate-50 px-3 py-2 rounded-lg">
-              <span className="text-slate-700 truncate">
-                {typeof item.itemId === 'object' ? item.itemId.name : 'Item'}
-              </span>
-              <span className="text-slate-900 font-semibold ml-2 flex-shrink-0">
-                {item.quantity} {typeof item.itemId === 'object' ? item.itemId.unit : ''}
-              </span>
-            </div>
-          ))}
-          {pkg.items.length > 3 && (
-            <div className="text-sm text-slate-500 text-center py-1">+{pkg.items.length - 3} more items</div>
-          )}
-        </div>
-
-        {/* Action buttons */}
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={onViewStock}
-            className="flex-1 min-w-[100px] px-3 py-2 text-sm bg-blue-50 text-blue-700 rounded-xl hover:bg-blue-100 transition-colors flex items-center justify-center gap-1.5 font-medium"
-          >
-            <Box className="w-4 h-4" />
-            View Stock
-          </button>
-          {isAdmin && (
-            <>
-              <button
-                onClick={onEdit}
-                className="px-3 py-2 text-sm bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 transition-colors"
-              >
-                <Edit className="w-4 h-4" />
-              </button>
-              <button
-                onClick={onDelete}
-                className="px-3 py-2 text-sm bg-red-50 text-red-700 rounded-xl hover:bg-red-100 transition-colors"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </>
-          )}
-        </div>
-      </div>
     </div>
   );
 }
@@ -398,8 +439,8 @@ function CreatePackageModal({ package: pkg, items, onClose, onSuccess }: any) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end md:items-center justify-center p-0 md:p-4">
-      <div className="bg-white w-full md:max-w-2xl rounded-lg max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+      <div className="bg-white w-full max-w-2xl rounded-lg max-h-[90vh] overflow-y-auto">
         <div className="sticky top-0 bg-white border-b px-4 md:px-6 py-4 flex items-center justify-between">
           <h2 className="text-lg md:text-xl font-semibold">
             {pkg ? 'Edit Package' : 'Create Package'}
@@ -509,13 +550,13 @@ function CreatePackageModal({ package: pkg, items, onClose, onSuccess }: any) {
 
 function StockSummaryModal({ summary, onClose }: any) {
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end md:items-center justify-center p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
       <div className="bg-white w-full md:max-w-lg rounded-2xl max-h-[90vh] overflow-hidden">
         <div className="sticky top-0 bg-white border-b px-4 md:px-6 py-4">
           <h2 className="text-lg md:text-xl font-semibold">Stock Summary</h2>
         </div>
 
-        <div className="p-4 md:p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+        <div className="p-4 md:p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
           <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
             <div className="text-sm text-green-700 mb-1">Available Packages</div>
             <div className="text-3xl font-bold text-green-900">{summary.maxPackages}</div>

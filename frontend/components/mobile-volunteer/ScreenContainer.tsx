@@ -26,7 +26,7 @@ export default function ScreenContainer({
   return (
     <div className="min-h-screen bg-slate-100">
       <div className="sticky top-0 bg-white border-b border-slate-200 z-30">
-        <div className="flex items-center justify-between px-4 py-3">
+        <div className="flex items-center gap-3 px-4 py-3">
           {showBack ? (
             <button 
               onClick={() => router.back()} 
@@ -43,16 +43,16 @@ export default function ScreenContainer({
               <Menu size={20} strokeWidth={2} className="text-slate-700" />
             </button>
           ) : (
-            <div className="w-10" />
+            <div className="w-10 flex-shrink-0" />
           )}
-          <div className="flex-1 text-center px-4">
+          <div className="flex-1 min-w-0">
             <h1 className="text-lg font-bold text-slate-900 truncate leading-none">{title}</h1>
             {subtitle && <p className="text-xs text-slate-500 truncate mt-0.5">{subtitle}</p>}
           </div>
           {action ? (
             <div className="flex-shrink-0">{action}</div>
           ) : (
-            <div className="w-10" />
+            <div className="w-10 flex-shrink-0" />
           )}
         </div>
       </div>

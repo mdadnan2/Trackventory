@@ -35,7 +35,11 @@ export default function ItemsPage() {
       setLoading(true);
       const response = await itemsAPI.getAll(page);
       const result: PaginatedResponse<Item> = response.data.data;
-      setItems(result.data);
+      const normalizedItems = result.data.map(item => ({
+        ...item,
+        isActive: Boolean(item.isActive)
+      }));
+      setItems(normalizedItems);
       setPagination(result.pagination);
     } catch (error) {
       console.error('Error loading items:', error);
@@ -59,16 +63,27 @@ export default function ItemsPage() {
 
   const handleToggleStatus = async (item: Item) => {
     setSelectedItem(item);
-    if (!item.isActive) {
+    // Only treat isActive as boolean if it is a boolean
+    const isActive = typeof item.isActive === 'boolean' ? item.isActive : false;
+    if (typeof item.isActive !== 'boolean') {
+      setToast({ message: 'Item status is invalid. Please refresh or contact support.', type: 'error' });
+      return;
+    }
+    if (!isActive) {
       try {
-        await itemsAPI.toggleStatus(item._id, true);
-        // Update local state immediately
-        setItems(items.map(i => 
+        const response = await itemsAPI.toggleStatus(item._id, true);
+        // Defensive: ensure response is valid
+        if (typeof response.data?.data?.isActive !== 'boolean') {
+          setToast({ message: 'Activation failed: invalid response from server.', type: 'error' });
+          return;
+        }
+        setItems(items.map(i =>
           i._id === item._id ? { ...i, isActive: true } : i
         ));
         setToast({ message: 'Item activated successfully', type: 'success' });
       } catch (error: any) {
-        setToast({ message: error.response?.data?.error || 'Error activating item', type: 'error' });
+        const errMsg = error.response?.data?.error || error.response?.data?.message || 'Error activating item';
+        setToast({ message: errMsg, type: 'error' });
       }
     } else {
       setShowConfirm(true);
@@ -78,61 +93,78 @@ export default function ItemsPage() {
   const confirmDeactivate = async () => {
     if (!selectedItem) return;
     try {
-      await itemsAPI.toggleStatus(selectedItem._id, false);
-      // Update local state immediately
-      setItems(items.map(item => 
+      const response = await itemsAPI.toggleStatus(selectedItem._id, false);
+      if (typeof response.data?.data?.isActive !== 'boolean') {
+        setToast({ message: 'Deactivation failed: invalid response from server.', type: 'error' });
+        return;
+      }
+      setItems(items.map(item =>
         item._id === selectedItem._id ? { ...item, isActive: false } : item
       ));
       setShowConfirm(false);
       setSelectedItem(null);
       setToast({ message: 'Item deactivated successfully', type: 'success' });
     } catch (error: any) {
-      setToast({ message: error.response?.data?.error || 'Error deactivating item', type: 'error' });
+      const errMsg = error.response?.data?.error || error.response?.data?.message || 'Error deactivating item';
+      setToast({ message: errMsg, type: 'error' });
     }
   };
 
   const columns = [
-    { 
-      key: 'name', 
+    {
+      key: 'name',
       label: 'Item Name',
-      render: (item: Item) => (
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
-            <Package size={20} className="text-blue-600" />
+      render: (item: Item) => {
+        const isActive = typeof item.isActive === 'boolean' ? item.isActive : false;
+        // Defensive: don't render objects as children
+        const safeName = typeof item.name === 'string' ? item.name : '[Invalid name]';
+        const safeCategory = typeof item.category === 'string' ? item.category : '[Invalid category]';
+        return (
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
+              <Package size={20} className="text-blue-600" />
+            </div>
+            <div>
+              <p className={`font-medium ${isActive ? 'text-slate-900' : 'text-slate-400'}`}>{safeName}</p>
+              <p className="text-sm text-slate-500">{safeCategory}</p>
+            </div>
           </div>
-          <div>
-            <p className={`font-medium ${item.isActive ? 'text-slate-900' : 'text-slate-400'}`}>{item.name}</p>
-            <p className="text-sm text-slate-500">{item.category}</p>
-          </div>
-        </div>
-      )
+        );
+      }
     },
-    { 
-      key: 'unit', 
+    {
+      key: 'unit',
       label: 'Unit',
-      render: (item: Item) => (
-        <span className={`text-sm ${item.isActive ? 'text-slate-700' : 'text-slate-400'}`}>{item.unit}</span>
-      )
+      render: (item: Item) => {
+        const isActive = typeof item.isActive === 'boolean' ? item.isActive : false;
+        const safeUnit = typeof item.unit === 'string' ? item.unit : '[Invalid unit]';
+        return (
+          <span className={`text-sm ${isActive ? 'text-slate-700' : 'text-slate-400'}`}>{safeUnit}</span>
+        );
+      }
     },
     {
       key: 'isActive',
       label: 'Status',
-      render: (item: Item) => (
-        <div className="flex items-center gap-3">
-          <label className="inline-flex items-center cursor-pointer">
-            <input
-              type="checkbox"
-              checked={item.isActive}
-              onChange={() => handleToggleStatus(item)}
-              className="sr-only peer"
-            />
-            <div className="relative w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-          </label>
-          <Badge variant={item.isActive ? 'success' : 'default'}>
-            {item.isActive ? 'Active' : 'Inactive'}
-          </Badge>
-        </div>
-      )
+      render: (item: Item) => {
+        const isActive = typeof item.isActive === 'boolean' ? item.isActive : false;
+        return (
+          <div className="flex items-center gap-3">
+            <label className="inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={isActive}
+                onChange={() => handleToggleStatus(item)}
+                className="sr-only peer"
+              />
+              <div className="relative w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+            </label>
+            <Badge variant={isActive ? 'success' : 'default'}>
+              {typeof item.isActive === 'boolean' ? (isActive ? 'Active' : 'Inactive') : '[Invalid status]'}
+            </Badge>
+          </div>
+        );
+      }
     }
   ];
 
@@ -237,7 +269,7 @@ export default function ItemsPage() {
         <div className="space-y-4">
           <div className="p-4 bg-orange-50 border border-orange-200 rounded-xl">
             <p className="text-sm text-orange-800">
-              <strong>{selectedItem?.name}</strong> will be deactivated and won't be available for new stock operations.
+              <strong>{typeof selectedItem?.name === 'string' ? selectedItem.name : 'This item'}</strong> will be deactivated and won't be available for new stock operations.
             </p>
           </div>
           <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">

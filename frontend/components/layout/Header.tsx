@@ -37,18 +37,18 @@ export default function Header({ user, onSignOut, title, description }: HeaderPr
   return (
     <>
       <header className="flex-shrink-0 h-16 bg-white border-b border-slate-200 z-10">
-        <div className="h-full px-4 lg:pl-8 lg:pr-4 flex items-center justify-between">
-          <div className="text-slate-700">
+        <div className="h-full px-4 pl-16 lg:pl-8 lg:pr-4 flex items-center gap-4 lg:gap-4">
+          <div className="flex-1 min-w-0 text-slate-700">
             {title ? (
               <div>
-                <h1 className="text-lg lg:text-xl font-bold text-slate-900">{title}</h1>
-                {description && <p className="text-xs lg:text-sm text-slate-500">{description}</p>}
+                <h1 className="text-lg lg:text-xl font-bold text-slate-900 truncate">{title}</h1>
+                {description && <p className="text-xs lg:text-sm text-slate-500 truncate">{description}</p>}
               </div>
             ) : (
-              <span className="text-sm lg:text-base">Welcome back, <span className="font-semibold">{user?.name}</span></span>
+              <span className="text-sm lg:text-base truncate block">Welcome back, <span className="font-semibold">{user?.name}</span></span>
             )}
           </div>
-          <div className="flex items-center">
+          <div className="flex items-center flex-shrink-0">
             <div className="relative">
               <button
                 onClick={() => setShowMenu(!showMenu)}

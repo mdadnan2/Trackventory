@@ -36,11 +36,15 @@ export default function Table<T>({ columns, data, keyExtractor, onRowClick }: Ta
                 onClick={() => onRowClick?.(item)}
                 className={`${onRowClick ? 'cursor-pointer hover:bg-slate-50' : ''} transition-colors`}
               >
-                {columns.map((col) => (
-                  <td key={col.key} className="px-6 py-4 text-sm text-slate-900">
-                    {col.render ? col.render(item) : (item as any)[col.key]}
-                  </td>
-                ))}
+                {columns.map((col) => {
+                  const value = (item as any)[col.key];
+                  const displayValue = typeof value === 'object' ? JSON.stringify(value) : String(value);
+                  return (
+                    <td key={col.key} className="px-6 py-4 text-sm text-slate-900">
+                      {col.render ? col.render(item) : displayValue}
+                    </td>
+                  );
+                })}
               </tr>
             ))}
           </tbody>

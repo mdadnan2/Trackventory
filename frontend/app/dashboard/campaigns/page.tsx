@@ -115,8 +115,31 @@ export default function CampaignsPage() {
   return (
     <>
       <ToastContainer toast={toast} onClose={() => setToast(null)} />
-      <div className="space-y-6">
-        <ContentCard className="p-4 sm:p-6">
+      <div className="md:space-y-6">
+        {/* Mobile: Stacked layout */}
+        <div className="md:hidden space-y-3 px-4 pt-4">
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+              <input
+                type="text"
+                placeholder="Search campaigns..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm"
+              />
+            </div>
+            <button
+              onClick={() => setShowForm(true)}
+              className="h-11 w-11 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold flex items-center justify-center transition-colors flex-shrink-0"
+            >
+              <Plus size={20} />
+            </button>
+          </div>
+        </div>
+
+        {/* Desktop: Original layout */}
+        <ContentCard className="hidden md:block p-4 sm:p-6">
           <div className="flex flex-col sm:flex-row gap-3 mb-8">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
@@ -134,6 +157,83 @@ export default function CampaignsPage() {
               <span className="sm:hidden">Add</span>
             </Button>
           </div>
+        </ContentCard>
+
+        {/* Campaign List */}
+        <div className="md:hidden px-4 pb-4">
+          {loading ? (
+            <div className="space-y-3">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="h-32 bg-slate-100 rounded-2xl animate-pulse" />
+              ))}
+            </div>
+          ) : filteredCampaigns.length === 0 ? (
+            <div className="text-center py-12">
+              <Megaphone size={40} className="mx-auto text-slate-300 mb-3" />
+              <p className="text-sm text-slate-500">{search ? 'No campaigns match your search.' : 'No campaigns found. Create your first campaign to get started.'}</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {filteredCampaigns.map((campaign, idx) => (
+                <motion.div
+                  key={campaign._id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: idx * 0.05 }}
+                  className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden"
+                >
+                  <div className="p-4">
+                    {/* Header with name and status */}
+                    <div className="flex items-start justify-between gap-3 mb-3">
+                      <h3 className="font-semibold text-base text-slate-900 flex-1 break-words">{campaign.name}</h3>
+                      <Badge variant={getStatusVariant(campaign.status)} className="w-fit flex-shrink-0 text-xs">
+                        {getStatusIcon(campaign.status)}
+                        <span className="ml-1 font-semibold">{campaign.status}</span>
+                      </Badge>
+                    </div>
+
+                    {/* Dates section */}
+                    <div className="space-y-2 mb-3 pb-3 border-b border-slate-100">
+                      <div className="flex items-center gap-2">
+                        <Calendar size={14} className="text-slate-400 flex-shrink-0" />
+                        <span className="text-xs text-slate-500">Start Date</span>
+                        <span className="text-sm font-medium text-slate-900">{new Date(campaign.startDate).toLocaleDateString()}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Calendar size={14} className="text-slate-400 flex-shrink-0" />
+                        <span className="text-xs text-slate-500">End Date</span>
+                        <span className="text-sm font-medium text-slate-900">{new Date(campaign.endDate).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    {campaign.status === 'ACTIVE' && (
+                      <div className="flex gap-2">
+                        <Button
+                          variant="secondary"
+                          onClick={() => handleStatusClick(campaign, 'COMPLETED')}
+                          className="flex-1 text-xs py-2 px-3 font-semibold h-9 rounded-lg"
+                        >
+                          Complete
+                        </Button>
+                        <Button
+                          variant="danger"
+                          onClick={() => handleStatusClick(campaign, 'CANCELLED')}
+                          className="flex-1 text-xs py-2 px-3 font-semibold h-9 rounded-lg"
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Desktop: Campaign list */}
+        <ContentCard className="hidden md:block p-4 sm:p-6">
           {loading ? (
             <div className="space-y-4">
               {[...Array(3)].map((_, i) => (
@@ -260,6 +360,15 @@ export default function CampaignsPage() {
             </div>
           </form>
         </Modal>
+
+        {/* Mobile Pagination */}
+        <div className="md:hidden px-4 pb-4">
+          <Pagination
+            currentPage={pagination.currentPage}
+            totalPages={pagination.totalPages}
+            onPageChange={loadCampaigns}
+          />
+        </div>
 
         <ConfirmDialog
           isOpen={confirmDialog.isOpen}

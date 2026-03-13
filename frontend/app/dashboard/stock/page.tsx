@@ -3,6 +3,7 @@
 import { useAuth } from '@/hooks/useAuth';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import MobileStock from '@/components/mobile-volunteer/mobile-pages/stock';
+import MobileStockAdmin from '@/components/mobile/pages/MobileStockAdmin';
 import { useEffect, useState } from 'react';
 import { stockAPI, itemsAPI, usersAPI, reportsAPI, packagesAPI } from '@/services/api';
 import { Item, User, StockItem, Package as PackageType } from '@/types';
@@ -445,6 +446,10 @@ export default function StockPage() {
       setToast({ message: error.response?.data?.error || 'Error returning stock', type: 'error' });
     }
   };
+
+  if (user?.role === 'ADMIN' && isMobile) {
+    return <MobileStockAdmin />;
+  }
 
   if (user?.role === 'VOLUNTEER') {
     console.log('Rendering volunteer view, isMobile:', isMobile, 'myStock:', myStock);

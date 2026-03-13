@@ -155,9 +155,24 @@ export default function PackagesPage() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-6 py-8 space-y-6 bg-gray-50 min-h-screen">
-      {/* Header Section */}
-      <div className="flex justify-between items-start">
+    <div className="md:max-w-5xl md:mx-auto md:px-6 md:py-8 md:space-y-6 md:bg-gray-50 md:min-h-screen min-h-screen bg-gray-50">
+      {/* Mobile Header */}
+      <div className="md:hidden sticky top-0 z-40 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
+        <div>
+          <h1 className="text-lg font-semibold text-gray-900">Packages</h1>
+          <p className="text-xs text-gray-500">Manage distributions</p>
+        </div>
+        <button
+          onClick={() => setShowCreateModal(true)}
+          className="flex items-center justify-center w-12 h-12 bg-blue-600 text-white rounded-full shadow-md hover:bg-blue-700 active:scale-95 transition-transform"
+          aria-label="Add package"
+        >
+          <Plus className="w-6 h-6" />
+        </button>
+      </div>
+
+      {/* Desktop Header */}
+      <div className="hidden md:flex justify-between items-start px-6 py-8">
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">Package Management</h1>
           <p className="text-sm text-gray-500 mt-1">Create and manage volunteer distribution packages</p>
@@ -172,8 +187,8 @@ export default function PackagesPage() {
       </div>
 
       {/* Search Bar */}
-      <div className="relative w-full">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+      <div className="relative w-full md:max-w-5xl md:mx-auto md:px-6 px-4 py-3 md:py-0">
+        <Search className="absolute left-7 md:left-9 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
         <input
           type="text"
           value={searchQuery}
@@ -182,125 +197,138 @@ export default function PackagesPage() {
             setCurrentPage(1);
           }}
           placeholder="Search packages..."
-          className="w-full border border-gray-200 rounded-lg pl-10 pr-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+          className="w-full border border-gray-200 rounded-xl md:rounded-lg pl-10 md:pl-10 pr-4 py-3 md:py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
         />
       </div>
 
       {/* Package List */}
-      {paginatedPackages.length === 0 ? (
-        <div className="bg-white rounded-lg p-8 text-center">
-          <PackageIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
-            {searchQuery ? 'No packages found' : 'No Packages Yet'}
-          </h3>
-          <p className="text-gray-600 mb-4">
-            {searchQuery ? 'Try adjusting your search' : 'Create your first package to get started'}
-          </p>
-          {!searchQuery && (
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
-              Create Package
-            </button>
-          )}
-        </div>
-      ) : (
-        <>
-          <div className="space-y-3">
-            {paginatedPackages.map((pkg) => {
-              const totalItems = pkg.items.reduce((sum: number, item: any) => sum + item.quantity, 0);
-              return (
-                <div
-                  key={pkg._id}
-                  className="bg-white border border-gray-200 rounded-xl px-5 py-4 hover:bg-gray-50 transition flex justify-between items-center"
-                >
-                  <div>
-                    <h3 className="text-base font-semibold text-gray-900">{pkg.name}</h3>
-                    <p className="text-sm text-gray-500">
-                      {pkg.items.length} {pkg.items.length === 1 ? 'item' : 'items'} • {totalItems} total quantity
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => viewStockSummary(pkg)}
-                      className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm bg-blue-50 text-blue-700 hover:bg-blue-100 font-medium"
-                    >
-                      <Eye className="w-4 h-4" />
-                      View
-                    </button>
-                    <button
-                      onClick={() => {
-                        setSelectedPackage(pkg);
-                        setShowCreateModal(true);
-                      }}
-                      className="rounded-lg px-3 py-1.5 text-sm border border-gray-200 hover:bg-gray-100"
-                    >
-                      <Edit className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(pkg._id)}
-                      className="rounded-lg px-3 py-1.5 text-sm border border-gray-200 hover:bg-red-50 hover:border-red-200 text-red-600"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
+      <div className="md:max-w-5xl md:mx-auto md:px-6">
+        {paginatedPackages.length === 0 ? (
+          <div className="mx-4 md:mx-0 bg-white rounded-2xl md:rounded-lg p-8 text-center mt-4 md:mt-0">
+            <PackageIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              {searchQuery ? 'No packages found' : 'No Packages Yet'}
+            </h3>
+            <p className="text-gray-600 mb-6">
+              {searchQuery ? 'Try adjusting your search' : 'Create your first package to get started'}
+            </p>
+            {!searchQuery && (
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="w-full md:w-auto px-6 py-3 md:py-2 bg-blue-600 text-white rounded-lg md:rounded-lg hover:bg-blue-700 font-medium"
+              >
+                Create Package
+              </button>
+            )}
           </div>
+        ) : (
+          <>
+            <div className="space-y-3 px-4 md:px-0 py-4 md:py-0">
+              {paginatedPackages.map((pkg) => {
+                const totalItems = pkg.items.reduce((sum: number, item: any) => sum + item.quantity, 0);
+                return (
+                  <div
+                    key={pkg._id}
+                    className="bg-white rounded-2xl md:rounded-xl shadow-sm md:border md:border-gray-200 overflow-hidden"
+                  >
+                    {/* Card Header */}
+                    <div className="px-4 md:px-5 py-4 md:py-4">
+                      <h3 className="text-lg md:text-base font-semibold text-gray-900">{pkg.name}</h3>
+                      <p className="text-sm text-gray-500 mt-1">
+                        {pkg.items.length} {pkg.items.length === 1 ? 'item' : 'items'} • {totalItems} total quantity
+                      </p>
+                    </div>
 
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex justify-between items-center mt-6">
-              <div className="text-sm text-gray-500">
-                Showing {startIndex + 1}–{Math.min(endIndex, filteredPackages.length)} of {filteredPackages.length} packages
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                  className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </button>
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  let pageNum;
-                  if (totalPages <= 5) {
-                    pageNum = i + 1;
-                  } else if (currentPage <= 3) {
-                    pageNum = i + 1;
-                  } else if (currentPage >= totalPages - 2) {
-                    pageNum = totalPages - 4 + i;
-                  } else {
-                    pageNum = currentPage - 2 + i;
-                  }
-                  return (
-                    <button
-                      key={pageNum}
-                      onClick={() => setCurrentPage(pageNum)}
-                      className={`rounded-lg px-3 py-1.5 text-sm ${
-                        currentPage === pageNum
-                          ? 'bg-blue-600 text-white border-blue-600'
-                          : 'border border-gray-200 hover:bg-gray-100'
-                      }`}
-                    >
-                      {pageNum}
-                    </button>
-                  );
-                })}
-                <button
-                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
-                  className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
+                    {/* Card Divider */}
+                    <div className="hidden md:block h-px bg-gray-200"></div>
+
+                    {/* Card Actions */}
+                    <div className="px-4 md:px-5 py-3 md:py-3 flex gap-2 md:gap-2">
+                      <button
+                        onClick={() => viewStockSummary(pkg)}
+                        className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 md:px-3 py-3 md:py-1.5 text-sm font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 md:hover:bg-blue-100 rounded-lg md:rounded-lg active:scale-95 transition-all"
+                        aria-label="View stock summary"
+                      >
+                        <Eye className="w-5 md:w-4 h-5 md:h-4" />
+                        <span className="md:hidden">View</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setSelectedPackage(pkg);
+                          setShowCreateModal(true);
+                        }}
+                        className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 md:px-3 py-3 md:py-1.5 text-sm font-medium border border-gray-200 text-gray-700 hover:bg-gray-100 md:hover:bg-gray-100 rounded-lg md:rounded-lg active:scale-95 transition-all"
+                        aria-label="Edit package"
+                      >
+                        <Edit className="w-5 md:w-4 h-5 md:h-4" />
+                        <span className="md:hidden">Edit</span>
+                      </button>
+                      <button
+                        onClick={() => handleDelete(pkg._id)}
+                        className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 md:px-3 py-3 md:py-1.5 text-sm font-medium border border-gray-200 text-red-600 hover:bg-red-50 md:hover:bg-red-50 rounded-lg md:rounded-lg active:scale-95 transition-all"
+                        aria-label="Delete package"
+                      >
+                        <Trash2 className="w-5 md:w-4 h-5 md:h-4" />
+                        <span className="md:hidden">Delete</span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-          )}
-        </>
-      )}
+
+            {/* Pagination - Desktop Only */}
+            {totalPages > 1 && (
+              <div className="hidden md:flex justify-between items-center mt-6">
+                <div className="text-sm text-gray-500">
+                  Showing {startIndex + 1}–{Math.min(endIndex, filteredPackages.length)} of {filteredPackages.length} packages
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let pageNum;
+                    if (totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (currentPage <= 3) {
+                      pageNum = i + 1;
+                    } else if (currentPage >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i;
+                    } else {
+                      pageNum = currentPage - 2 + i;
+                    }
+                    return (
+                      <button
+                        key={pageNum}
+                        onClick={() => setCurrentPage(pageNum)}
+                        className={`rounded-lg px-3 py-1.5 text-sm ${
+                          currentPage === pageNum
+                            ? 'bg-blue-600 text-white border-blue-600'
+                            : 'border border-gray-200 hover:bg-gray-100'
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  })}
+                  <button
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
 
       {/* Toast Notification */}
       {toast && (
